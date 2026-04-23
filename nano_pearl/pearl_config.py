@@ -3,6 +3,7 @@ from nano_pearl.utils.pearl_logger import logger, get_model_name
 from dataclasses import dataclass
 from transformers import AutoConfig
 import torch.distributed as dist
+from math import ceil
 
 
 @dataclass
@@ -23,7 +24,7 @@ class BaseConfig:
         self.tensor_parallel_size = tensor_parallel_size
         self.devices = devices
         self.group_name = group_name
-        self.hf_config = AutoConfig.from_pretrained(self.model)
+        self.hf_config = AutoConfig.from_pretrained(self.model) #模型的元数据读进来
         self.eos = self.hf_config.eos_token_id
         self.master_rank = self.devices[0]
         logger.info(f"Model={get_model_name(self.model)}")
@@ -34,20 +35,24 @@ class BaseConfig:
         logger.info(f"Vocab_Size={self.hf_config.vocab_size}")
         logger.info(f"Eos={self.eos}")
 
-        # Dynamic TP: Padding Parameters
+        # Dynamic TP: Padding Parameters 如果不是2的幂次方，进行Padding，
         if self.tensor_parallel_size not in [1, 2, 4, 8]:
             logger.warning(
                 f"Currently, non-2-power TP is a developing feature, and you may encounter some unexpected errors."
             )
+
             num_heads = self.hf_config.num_attention_heads
-            num_kv_heads = self.hf_config.num_key_value_heads
-            intermediate_size = self.hf_config.intermediate_size
+            num_kv_heads = getattr(self.hf_config, "num_key_value_heads", num_heads)
+            intermediate_size = getattr(self.hf_config, "intermediate_size", None)
+            if intermediate_size is None:
+                intermediate_size = getattr(self.hf_config, "ffn_dim", None)
+            if intermediate_size is None:
+                raise AttributeError("Cannot find FFN dimension in model config.")
             vocab_size = self.hf_config.vocab_size
             tp = self.tensor_parallel_size
             
-            from math import ceil
             
-            gqa_ratio = num_heads // num_kv_heads
+            gqa_ratio = num_heads // num_kv_heads   #GQA
             padded_num_kv_heads = ceil(num_kv_heads / tp) * tp
             padded_num_heads = padded_num_kv_heads * gqa_ratio
             # Ensure per-rank intermediate shard is Tensor Core friendly (multiple of 128).
@@ -63,6 +68,8 @@ class BaseConfig:
             self.hf_config.num_key_value_heads = padded_num_kv_heads
             self.hf_config.num_attention_heads = padded_num_heads
             self.hf_config.intermediate_size = padded_intermediate_size
+            if hasattr(self.hf_config, "ffn_dim"):
+                self.hf_config.ffn_dim = padded_intermediate_size
             self.hf_config.valid_vocab_size = self.hf_config.vocab_size
             self.hf_config.vocab_size = padded_vocab_size
 
@@ -70,13 +77,13 @@ class BaseConfig:
 class PEARLConfig:
     draft_model_path: str
     target_model_path: str
-    draft_tensor_parallel_size: int = 2
+    draft_tensor_parallel_size: int = 1
     target_tensor_parallel_size: int = 2
     draft_group_name: str = "draft_group"
     target_group_name: str = "target_group"
-    max_num_batched_tokens: int = 16384 # 8192 for 40GB GPUs
-    max_num_seqs: int = 512 # 128 or 256 for 40GB GPUs
-    max_model_len: int = 4096
+    max_num_batched_tokens: int = 8192 # 8192 for 40GB GPUs
+    max_num_seqs: int = 256 # 128 or 256 for 40GB GPUs
+    max_model_len: int = 2048
     gpu_memory_utilization: float = 0.9
     kvcache_block_size: int = 256
     num_kvcache_blocks: int = -1

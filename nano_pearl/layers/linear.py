@@ -164,11 +164,12 @@ class RowParallelLinear(LinearBase):
 
     def weight_loader(self, param: nn.Parameter, loaded_weight: torch.Tensor):
         param_data = param.data
-        shard_size = param_data.size(self.tp_dim)
+        dim = self.tp_dim if param.dim() == 2 else 0
+        shard_size = param_data.size(dim)
         start_idx = self.tp_rank * shard_size
-        num_pad = max(0, shard_size - (loaded_weight.size(self.tp_dim) - start_idx))
-        loaded_weight = pad_tensor(loaded_weight, num_pad, self.tp_dim if param.dim() == 2 else 0)
-        loaded_weight = loaded_weight.narrow(self.tp_dim, start_idx, shard_size)
+        num_pad = max(0, shard_size - (loaded_weight.size(dim) - start_idx))
+        loaded_weight = pad_tensor(loaded_weight, num_pad, dim)
+        loaded_weight = loaded_weight.narrow(dim, start_idx, shard_size)
         param_data.copy_(loaded_weight)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

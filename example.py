@@ -1,10 +1,13 @@
 from nano_pearl import PEARLConfig, PEARLEngine, SamplingParams, logger
 
 def main():
-    draft_model_path = "/path/to/draft/model"
-    target_model_path = "/path/to/target/model"
+    draft_model_path = "/tmp/modelscope_cache/models/qwen/Qwen3-0___6B"
+    target_model_path = "/tmp/modelscope_cache/models/qwen/Qwen3-32B"
+
+    #draft_model_path = "/dev/shm/facebook/opt-1___3b"
+    #target_model_path = "/dev/shm/facebook/opt-30b"
     
-    config = PEARLConfig(draft_model_path, target_model_path, draft_tensor_parallel_size=1, target_tensor_parallel_size=1, gpu_memory_utilization=0.9)
+    config = PEARLConfig(draft_model_path, target_model_path, draft_tensor_parallel_size=1, target_tensor_parallel_size=3, gpu_memory_utilization=0.8)
     engine = PEARLEngine(config)
     
     prompt = "Explain quantum computing in simple terms"

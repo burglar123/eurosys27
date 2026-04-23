@@ -105,15 +105,18 @@ class PEARLEngine:
         self.controller.draft_shm.unlink()
         self.controller.target_shm.unlink()
         
-
     def add_request(self, prompt: str | list[int], sampling_params: SamplingParams):
         if isinstance(prompt, str):
-            prompt = self.tokenizer.apply_chat_template(
-                [{"role": "user", "content": prompt}],
-                tokenize=False,
-                add_generation_prompt=True,
-            )
-            prompt = self.tokenizer.encode(prompt)
+            if getattr(self.tokenizer, "chat_template", None):
+                prompt = self.tokenizer.apply_chat_template(
+                    [{"role": "user", "content": prompt}],
+                    tokenize=False,
+                    add_generation_prompt=True,
+                )
+                prompt = self.tokenizer.encode(prompt)
+            else:
+                prompt = self.tokenizer.encode(prompt, add_special_tokens=True)
+
         seq = Sequence(prompt, sampling_params)
         self.controller.write_draft_shm("add_request", seq)
         self.controller.write_target_shm("add_request", seq)

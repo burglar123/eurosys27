@@ -115,32 +115,63 @@ class ModelRunnerBase:
         model_device = next(self.model.parameters()).device
         if self.rank == 0:
             logger.info(f"initialized model, kvcache and scheduler. ", color="green")
-        
+
     def allocate_kv_cache(self):
         hf_config = self.hf_config
         free, total = torch.cuda.mem_get_info()
         used = total - free
         peak = torch.cuda.memory_stats()["allocated_bytes.all.peak"]
         current = torch.cuda.memory_stats()["allocated_bytes.all.current"]
-        num_kv_heads = hf_config.num_key_value_heads // self.tensor_parallel_size
+
+        num_kv_heads = getattr(
+            hf_config,
+            "num_key_value_heads",
+            hf_config.num_attention_heads,
+        ) // self.tensor_parallel_size
+
         head_dim = (
             hf_config.head_dim
             if hasattr(hf_config, "head_dim")
             else hf_config.hidden_size // hf_config.num_attention_heads
         )
-        block_bytes = 2 * hf_config.num_hidden_layers * self.block_size * num_kv_heads * head_dim * hf_config.torch_dtype.itemsize
-        self.global_config.num_kvcache_blocks = int(total * self.global_config.gpu_memory_utilization - used - peak + current) // block_bytes
+
+        block_bytes = (
+            2
+            * hf_config.num_hidden_layers
+            * self.block_size
+            * num_kv_heads
+            * head_dim
+            * hf_config.torch_dtype.itemsize
+        )
+
+        self.global_config.num_kvcache_blocks = int(
+            total * self.global_config.gpu_memory_utilization - used - peak + current
+        ) // block_bytes
         assert self.global_config.num_kvcache_blocks > 0
-        self.kv_cache = torch.empty(2, hf_config.num_hidden_layers, self.global_config.num_kvcache_blocks, self.block_size, num_kv_heads, head_dim)
+
+        self.kv_cache = torch.empty(
+            2,
+            hf_config.num_hidden_layers,
+            self.global_config.num_kvcache_blocks,
+            self.block_size,
+            num_kv_heads,
+            head_dim,
+        )
+
         layer_id = 0
         for module in self.model.modules():
             if hasattr(module, "k_cache") and hasattr(module, "v_cache"):
                 module.k_cache = self.kv_cache[0, layer_id]
                 module.v_cache = self.kv_cache[1, layer_id]
                 layer_id += 1
+
         dist.barrier()
         if self.tp_params.local_rank == 0:
-            logger.info(f"[Rank {self.rank}: {self.group_name}] allocated GPU memory {self.global_config.num_kvcache_blocks * block_bytes / 2**30} GiB for kvcache.", color="green")
+            logger.info(
+                f"[Rank {self.rank}: {self.group_name}] allocated GPU memory "
+                f"{self.global_config.num_kvcache_blocks * block_bytes / 2**30} GiB for kvcache.",
+                color="green",
+            )
 
     def loop(self):
         while True:
