@@ -57,6 +57,16 @@ class Controller:
         output, elapsed_time, traces, service_metadata = payload
         return output, elapsed_time, traces, service_metadata
     
+    def read_payload(self, shm: SharedMemory):
+        n = int.from_bytes(shm.buf[0:4], "little")
+        data = shm.buf[4:n+4]
+        payload = pickle.loads(data)
+        if len(payload) == 2:
+            output, elapsed_time = payload
+            return output, elapsed_time, [], []
+        output, elapsed_time, traces, service_metadata = payload
+        return output, elapsed_time, traces, service_metadata
+
     def read_output(self):
         return self.read_payload(self.target_shm)
 
@@ -81,6 +91,7 @@ class PEARLEngine:
     def __init__(self, config: PEARLConfig):
         self.config = config
         self.ps = []
+        self._exited = False
         
         ctx = mp.get_context("spawn")
         # the control event is used to wait for the sub-processes to be ready
@@ -122,14 +133,25 @@ class PEARLEngine:
         self.control_event.clear()
 
     def exit(self):
-        self.controller.write_draft_shm("exit")
-        self.controller.write_target_shm("exit")
+        if self._exited:
+            return
+        self._exited = True
+        try:
+            self.controller.write_draft_shm("exit")
+            self.controller.write_target_shm("exit")
+        except Exception as exc:
+            logger.warning(f"[Main Process] Failed to send exit command during cleanup: {exc}")
         for p in self.ps:
-            p.join()                   
-        self.controller.draft_shm.close()
-        self.controller.target_shm.close()
-        self.controller.draft_shm.unlink()
-        self.controller.target_shm.unlink()
+            p.join()
+        for shm in (self.controller.draft_shm, self.controller.target_shm):
+            try:
+                shm.close()
+            except Exception:
+                pass
+            try:
+                shm.unlink()
+            except FileNotFoundError:
+                pass
         
 
     def add_request(
@@ -182,6 +204,30 @@ class PEARLEngine:
         
         return output_text, num_tokens, num_acc_tokens, time
 
+    def serialized_pearl_generate(self):
+        """Run the serialized-PEARL approximation baseline.
+
+        This is not strict vanilla serial speculative decoding. It reuses the
+        PEARL runner semantics while disabling draft/verify overlap.
+        """
+        self.controller.write_draft_shm("serialized_pearl_generate")
+        self.controller.write_target_shm("serialized_pearl_generate")
+        self.control_event.wait()
+        self.control_event.clear()
+
+        output, time, target_traces, target_request_metadata = self.controller.read_output()
+        try:
+            self.last_traces, self.last_request_metadata = self.controller.read_all_traces()
+        except Exception:
+            self.last_traces = target_traces
+            self.last_request_metadata = target_request_metadata
+        output = sorted(output, key=lambda x: x[0])
+        seq_id, token_ids, num_acc_tokens = zip(*output)
+        output_text = [self.tokenizer.decode(token_ids, skip_special_tokens=False) for token_ids in token_ids]
+        num_tokens = [len(t) for t in token_ids]
+
+        return output_text, num_tokens, num_acc_tokens, time
+
     def AR_generate(self):
         """Only use target model for Auto-Regressive generation."""
         self.controller.write_draft_shm("parallel_generate")
@@ -205,6 +251,26 @@ class PEARLEngine:
     def bench_generate(self, num_pearl_steps: int = 100):
         self.controller.write_draft_shm("pearl_bench_generate", num_pearl_steps)
         self.controller.write_target_shm("pearl_bench_generate", num_pearl_steps)
+        self.control_event.wait()
+        self.control_event.clear()
+
+        output, time, target_traces, target_request_metadata = self.controller.read_output()
+        try:
+            self.last_traces, self.last_request_metadata = self.controller.read_all_traces()
+        except Exception:
+            self.last_traces = target_traces
+            self.last_request_metadata = target_request_metadata
+        output = sorted(output, key=lambda x: x[0])
+        seq_id, token_ids, num_acc_tokens = zip(*output)
+        output_text = [self.tokenizer.decode(token_ids, skip_special_tokens=False) for token_ids in token_ids]
+        num_tokens = [len(t) for t in token_ids]
+
+        return output_text, num_tokens, num_acc_tokens, time
+
+    def serialized_pearl_bench_generate(self, num_pearl_steps: int = 100):
+        """Benchmark the serialized-PEARL approximation baseline."""
+        self.controller.write_draft_shm("serialized_pearl_bench_generate", num_pearl_steps)
+        self.controller.write_target_shm("serialized_pearl_bench_generate", num_pearl_steps)
         self.control_event.wait()
         self.control_event.clear()
 

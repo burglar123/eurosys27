@@ -108,6 +108,7 @@ class ModelRunnerBase:
         self.allocate_kv_cache()
         self.scheduler = Scheduler(self.global_config)
         self.trace_records = []
+        self.active_execution_mode = self.global_config.execution_mode
         if not self.global_config.enforce_eager:
             self.capture_cudagraph()
         torch.set_default_dtype(self.default_dtype)
@@ -308,23 +309,41 @@ class ModelRunnerBase:
     def _runner_role(self):
         return "draft" if self.is_draft else "verify"
 
+    def _set_execution_mode(self, execution_mode: str):
+        if execution_mode not in self.global_config.ALLOWED_EXECUTION_MODES:
+            raise ValueError(
+                f"Invalid execution_mode={execution_mode!r}. "
+                f"Expected one of {sorted(self.global_config.ALLOWED_EXECUTION_MODES)}."
+            )
+        self.active_execution_mode = execution_mode
+
     def _trace_schedule(self, seqs: list[Sequence], is_prefill: bool, runner_role: str):
         iteration_id, batch_id = self.scheduler.next_batch_id(runner_role)
         for seq in seqs:
             seq.mark_scheduled(iteration_id, batch_id, is_prefill, runner_role)
+        per_seq_zeros = {seq.seq_id: 0 for seq in seqs}
         record = {
+            "execution_mode": self.active_execution_mode,
             "iteration_id": iteration_id,
             "batch_id": batch_id,
             "runner_role": runner_role,
             "scheduled_seq_ids": [seq.seq_id for seq in seqs],
             "request_ids": [seq.request_id for seq in seqs],
+            "num_seqs_in_batch": len(seqs),
             "is_prefill": is_prefill,
             "draft_start_ts": None,
             "draft_end_ts": None,
             "verify_start_ts": None,
             "verify_end_ts": None,
-            "per_seq_accepted_len": {seq.seq_id: 0 for seq in seqs},
-            "per_seq_invalidated_predraft_len": {seq.seq_id: 0 for seq in seqs},
+            "total_iteration_start_ts": None,
+            "total_iteration_end_ts": None,
+            "draft_time_ms": 0.0,
+            "verify_time_ms": 0.0,
+            "total_iteration_time_ms": 0.0,
+            "per_seq_accepted_len": dict(per_seq_zeros),
+            "accepted_tokens_per_seq": dict(per_seq_zeros),
+            "per_seq_invalidated_predraft_len": dict(per_seq_zeros),
+            "total_accepted_tokens": 0,
         }
         self.trace_records.append(record)
         return record
@@ -332,17 +351,35 @@ class ModelRunnerBase:
     def _mark_trace_start(self, record: dict):
         if self.tp_params.local_rank != 0:
             return
+        now = time.time()
         key = "draft_start_ts" if self.is_draft else "verify_start_ts"
-        record[key] = time.time()
+        record[key] = now
+        if record["total_iteration_start_ts"] is None:
+            record["total_iteration_start_ts"] = now
+
+    def _update_trace_token_stats(self, record: dict, accepted_lens: dict[int, int] | None = None, invalidated_lens: dict[int, int] | None = None):
+        if accepted_lens:
+            accepted_lens = {seq_id: int(accepted_len) for seq_id, accepted_len in accepted_lens.items()}
+            record["per_seq_accepted_len"].update(accepted_lens)
+            record["accepted_tokens_per_seq"].update(accepted_lens)
+            record["total_accepted_tokens"] = sum(record["accepted_tokens_per_seq"].values())
+        if invalidated_lens:
+            invalidated_lens = {seq_id: int(invalidated_len) for seq_id, invalidated_len in invalidated_lens.items()}
+            record["per_seq_invalidated_predraft_len"].update(invalidated_lens)
 
     def _mark_trace_end(self, record: dict, accepted_lens: dict[int, int] | None = None, invalidated_lens: dict[int, int] | None = None):
         if self.tp_params.local_rank == 0:
+            now = time.time()
             key = "draft_end_ts" if self.is_draft else "verify_end_ts"
-            record[key] = time.time()
-        if accepted_lens:
-            record["per_seq_accepted_len"].update(accepted_lens)
-        if invalidated_lens:
-            record["per_seq_invalidated_predraft_len"].update(invalidated_lens)
+            record[key] = now
+            record["total_iteration_end_ts"] = now
+            if record["draft_start_ts"] is not None and record["draft_end_ts"] is not None:
+                record["draft_time_ms"] = (record["draft_end_ts"] - record["draft_start_ts"]) * 1000
+            if record["verify_start_ts"] is not None and record["verify_end_ts"] is not None:
+                record["verify_time_ms"] = (record["verify_end_ts"] - record["verify_start_ts"]) * 1000
+            if record["total_iteration_start_ts"] is not None:
+                record["total_iteration_time_ms"] = (now - record["total_iteration_start_ts"]) * 1000
+        self._update_trace_token_stats(record, accepted_lens=accepted_lens, invalidated_lens=invalidated_lens)
 
     def _service_metadata(self):
         seqs = list(self.scheduler.waiting) + list(self.scheduler.running) + list(self.scheduler.finished)
@@ -458,6 +495,7 @@ class ModelRunnerBase:
         dist.barrier()
 
     def parallel_generate(self):
+        self._set_execution_mode("ar")
         dist.barrier()
 
         torch.cuda.synchronize()
@@ -476,6 +514,7 @@ class ModelRunnerBase:
         self.clear_requests()
 
     def pearl_generate(self):
+        self._set_execution_mode("parallel_pearl")
         dist.barrier()
         torch.cuda.synchronize()
         start_time = time.time()
@@ -499,12 +538,14 @@ class ModelRunnerBase:
         self.clear_requests()
 
     def pearl_bench_generate(self, num_pearl_steps: int = 100):
+        """Benchmark the real-world throughput of the PEARL algorithm.
+
+        For speculative decoding, either setting the max tokens or ignore eos
+        tokens is not fair! As there always exists some seqs that have higher
+        MAT and early finished. Therefore, we must set a fixed PEARL steps to
+        ensure all the sequences are running at any time.
         """
-        Benchmark the real-world throughput of the PEARL algorithm.
-        For speculative decoding, either setting the max tokens or ignore eos tokens is not fair! 
-        As there always exists some seqs that have higher MAT and early finished.
-        Therefore, we must set a fixed PEARL steps to ensure, all the sequences are running at any time, no sequence is early finished.
-        """
+        self._set_execution_mode("parallel_pearl")
         dist.barrier()
         torch.cuda.synchronize()
         start_time = time.time()
@@ -535,8 +576,80 @@ class ModelRunnerBase:
             
         self.clear_requests()
 
+
+    def serialized_pearl_generate(self):
+        """Run a serialized-PEARL approximation baseline.
+
+        This is intentionally *not* a strict vanilla serial speculative decoding
+        implementation. It reuses PEARL's existing verification semantics but
+        adds runner-side synchronization so draft and target verification compute
+        do not overlap. A larger refactor would be required for textbook serial
+        speculative decoding.
+        """
+        self._set_execution_mode("serialized_pearl")
+        dist.barrier()
+        torch.cuda.synchronize()
+        start_time = time.time()
+        self.prefill()
+
+        if self.gamma == -1:
+            self.gamma = self.gamma_list[next(x for x in self.gamma_list if x >= len(self.scheduler.running))]
+
+        while not self.scheduler.is_finished():
+            self.serialized_pearl_step()
+
+        torch.cuda.synchronize()
+        end_time = time.time()
+        seqs = self.scheduler.finished
+        output = [(seq.seq_id, seq.completion_token_ids, seq.num_acc_tokens) for seq in seqs]
+
+        if self.tp_params.local_rank == 0:
+            self._write_generation_result(output, end_time - start_time)
+
+        self.clear_requests()
+
+    def serialized_pearl_bench_generate(self, num_pearl_steps: int = 100):
+        """Benchmark serialized-PEARL with fixed PEARL steps.
+
+        This is an approximation baseline that disables draft/verify overlap in
+        the current PEARL pipeline; it is not a strict vanilla serial
+        speculative decoding implementation.
+        """
+        self._set_execution_mode("serialized_pearl")
+        dist.barrier()
+        torch.cuda.synchronize()
+        start_time = time.time()
+        self.prefill()
+
+        for seq in self.scheduler.running:
+            seq.max_tokens = 1e8
+            seq.ignore_eos = True
+        if self.gamma == -1:
+            self.gamma = self.gamma_list[next(x for x in self.gamma_list if x >= len(self.scheduler.running))]
+
+        for _ in range(num_pearl_steps):
+            self.serialized_pearl_step()
+
+        torch.cuda.synchronize()
+        end_time = time.time()
+        seqs = self.scheduler.running
+
+        for seq in seqs:
+            seq.num_acc_tokens.append(seq.cur_acc_tokens)
+
+        output = [(seq.seq_id, seq.completion_token_ids, seq.num_acc_tokens) for seq in seqs]
+
+        if self.tp_params.local_rank == 0:
+            self._write_generation_result(output, end_time - start_time)
+
+        self.clear_requests()
+
     @abstractmethod
     def pearl_step(self):
+        pass
+
+    @abstractmethod
+    def serialized_pearl_step(self):
         pass
 
 
@@ -572,8 +685,41 @@ class DraftModelRunner(ModelRunnerBase):
 
         accepted_lens, invalidated_lens = self.verify(seqs)
         if trace_record is not None:
-            trace_record["per_seq_accepted_len"].update(accepted_lens)
-            trace_record["per_seq_invalidated_predraft_len"].update(invalidated_lens)
+            self._update_trace_token_stats(trace_record, accepted_lens=accepted_lens, invalidated_lens=invalidated_lens)
+
+    def serialized_pearl_step(self):
+        """Serialized-PEARL draft phase.
+
+        Approximation baseline: draft generates with existing PEARL semantics, then
+        all ranks synchronize before target verification compute is allowed to run.
+        This disables draft/verify overlap without claiming vanilla serial
+        speculative decoding equivalence.
+        """
+        trace_record = None
+        for _ in range(self.gamma):
+            seqs, is_prefill = self.scheduler.schedule()
+            trace_record = self._trace_schedule(seqs, is_prefill, "serialized_draft")
+            assert not is_prefill, "wrong match. current stage is prefill."
+            input_ids, positions = self.prepare_pearl_decode(seqs)
+            torch.cuda.synchronize()
+            self._mark_trace_start(trace_record)
+            logits = self.run_model(input_ids, positions, is_prefill)
+            sample_tokens = logits.argmax(dim=-1) if self.tp_params.local_rank == 0 else torch.zeros(len(seqs), dtype=torch.int64, pin_memory=True).cuda(non_blocking=True)
+            dist.broadcast(sample_tokens, src=self.tp_params.master_rank, group=self.group)
+            torch.cuda.synchronize()
+            token_ids = sample_tokens.tolist()
+            reset_context(self.tp_params)
+
+            for seq, token_id in zip(seqs, token_ids):
+                seq.append_token(token_id)
+            self._mark_trace_end(trace_record)
+
+        # Global barrier pairs with TargetModelRunner.serialized_pearl_step().
+        # It prevents target verification compute from overlapping this draft phase.
+        dist.barrier()
+        accepted_lens, invalidated_lens = self.verify(seqs)
+        if trace_record is not None:
+            self._update_trace_token_stats(trace_record, accepted_lens=accepted_lens, invalidated_lens=invalidated_lens)
 
     @torch.inference_mode()
     def verify(self, seqs: list[Sequence]):
@@ -680,6 +826,29 @@ class TargetModelRunner(ModelRunnerBase):
         torch.cuda.synchronize()
         self._mark_trace_end(trace_record, accepted_lens=accepted_lens, invalidated_lens=invalidated_lens)
 
+    def serialized_pearl_step(self):
+        """Serialized-PEARL target verification phase.
+
+        Approximation baseline: target ranks wait for draft ranks at a global
+        barrier before running the existing PEARL verification compute. This
+        disables draft/verify overlap but does not implement strict vanilla
+        serial speculative decoding.
+        """
+        # Global barrier pairs with DraftModelRunner.serialized_pearl_step().
+        # Do not move this below target compute, or draft/verify will overlap.
+        dist.barrier()
+        seqs, is_prefill = self.scheduler.schedule()
+        trace_record = self._trace_schedule(seqs, is_prefill, "serialized_verify")
+        assert not is_prefill, "wrong match. current stage is prefill."
+        input_ids, positions, temp_seqs = self.prepare_pearl_decode(seqs)
+        temperatures = self.prepare_sample(temp_seqs) if self.tp_params.local_rank == 0 else None
+        torch.cuda.synchronize()
+        self._mark_trace_start(trace_record)
+        logits = self.run_model(input_ids, positions, is_prefill)
+        accepted_lens, invalidated_lens = self.verify(logits, seqs, temperatures)
+        torch.cuda.synchronize()
+        self._mark_trace_end(trace_record, accepted_lens=accepted_lens, invalidated_lens=invalidated_lens)
+
     @torch.inference_mode()
     def verify(self, logits: torch.Tensor, seqs: list[Sequence], temperatures: torch.Tensor):
         """Refer to the verification logic in the draft model verification function."""
@@ -761,8 +930,6 @@ class TargetModelRunner(ModelRunnerBase):
             invalidated_lens[seq.seq_id] = invalidated_len
             seq.record_accepted(accepted_len)
             seq.record_invalidated_predraft(invalidated_len)
-
-        for idx, seq in enumerate(seqs):
             
             if seq.pre_verify:
                 if acc[idx]:
@@ -784,7 +951,7 @@ class TargetModelRunner(ModelRunnerBase):
                     seq.mark_finished()       
         
             if finish[idx]:
-                seq.status = SequenceStatus.FINISHED
+                seq.mark_finished()
                 seq.num_acc_tokens.append(seq.cur_acc_tokens)
                 self.scheduler.block_manager.deallocate(seq)
                 self.scheduler.running.remove(seq)

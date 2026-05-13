@@ -145,7 +145,7 @@ class Sequence:
             "per_request_gamma": self.per_request_gamma,
             "trace_stats": self.trace_stats,
         }
-        
+
     def __getstate__(self):
         return (self.num_tokens, self.num_prompt_tokens, self.num_cached_tokens, self.block_table,
                 self.temperature, self.ignore_eos, self.max_tokens, self.seq_id, self.pre_verify,

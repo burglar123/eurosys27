@@ -100,6 +100,7 @@ class Scheduler:
             seq = self.finished.pop()
             self.block_manager.deallocate(seq)
         self.iteration_id = 0
+        self.block_manager.hash_to_block_id.clear()
         for block in self.block_manager.blocks:
             block.hash = -1
             block.token_ids = []
