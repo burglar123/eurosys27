@@ -1,0 +1,1335 @@
+{
+  "traces": [
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 0,
+      "batch_id": "verify_prefill-0",
+      "runner_role": "verify_prefill",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": true,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778683719.1437852,
+      "verify_end_ts": 1778683719.1917353,
+      "total_iteration_start_ts": 1778683719.1437852,
+      "total_iteration_end_ts": 1778683719.1917353,
+      "draft_time_ms": 0.0,
+      "verify_time_ms": 47.950029373168945,
+      "total_iteration_time_ms": 47.950029373168945,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "accepted_tokens_per_seq": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 1
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 0,
+      "batch_id": "draft_prefill-0",
+      "runner_role": "draft_prefill",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": true,
+      "draft_start_ts": 1778683719.1437955,
+      "draft_end_ts": 1778683719.182855,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.1437955,
+      "total_iteration_end_ts": 1778683719.182855,
+      "draft_time_ms": 39.05940055847168,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 39.05940055847168,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "accepted_tokens_per_seq": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 1
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 1,
+      "batch_id": "draft-1",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.1922352,
+      "draft_end_ts": 1778683719.1943488,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.1922352,
+      "total_iteration_end_ts": 1778683719.1943488,
+      "draft_time_ms": 2.1135807037353516,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.1135807037353516,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 1,
+      "batch_id": "verify-1",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778683719.1922612,
+      "verify_end_ts": 1778683719.2495947,
+      "total_iteration_start_ts": 1778683719.1922612,
+      "total_iteration_end_ts": 1778683719.2495947,
+      "draft_time_ms": 0.0,
+      "verify_time_ms": 57.33346939086914,
+      "total_iteration_time_ms": 57.33346939086914,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "accepted_tokens_per_seq": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 1
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 2,
+      "batch_id": "draft-2",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.1945171,
+      "draft_end_ts": 1778683719.1966128,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.1945171,
+      "total_iteration_end_ts": 1778683719.1966128,
+      "draft_time_ms": 2.0956993103027344,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0956993103027344,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 3,
+      "batch_id": "draft-3",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.1967683,
+      "draft_end_ts": 1778683719.1988595,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.1967683,
+      "total_iteration_end_ts": 1778683719.1988595,
+      "draft_time_ms": 2.0911693572998047,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0911693572998047,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 4,
+      "batch_id": "draft-4",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.1990135,
+      "draft_end_ts": 1778683719.2011027,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.1990135,
+      "total_iteration_end_ts": 1778683719.2011027,
+      "draft_time_ms": 2.089262008666992,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.089262008666992,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "accepted_tokens_per_seq": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 1
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 5,
+      "batch_id": "draft-5",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2497456,
+      "draft_end_ts": 1778683719.251936,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2497456,
+      "total_iteration_end_ts": 1778683719.251936,
+      "draft_time_ms": 2.1903514862060547,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.1903514862060547,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 2,
+      "batch_id": "verify-2",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778683719.2498271,
+      "verify_end_ts": 1778683719.2617037,
+      "total_iteration_start_ts": 1778683719.2498271,
+      "total_iteration_end_ts": 1778683719.2617037,
+      "draft_time_ms": 0.0,
+      "verify_time_ms": 11.876583099365234,
+      "total_iteration_time_ms": 11.876583099365234,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "accepted_tokens_per_seq": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 4
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 6,
+      "batch_id": "draft-6",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2520964,
+      "draft_end_ts": 1778683719.254189,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2520964,
+      "total_iteration_end_ts": 1778683719.254189,
+      "draft_time_ms": 2.092599868774414,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.092599868774414,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 7,
+      "batch_id": "draft-7",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2543418,
+      "draft_end_ts": 1778683719.2564356,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2543418,
+      "total_iteration_end_ts": 1778683719.2564356,
+      "draft_time_ms": 2.093791961669922,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.093791961669922,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 8,
+      "batch_id": "draft-8",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2565918,
+      "draft_end_ts": 1778683719.2586832,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2565918,
+      "total_iteration_end_ts": 1778683719.2586832,
+      "draft_time_ms": 2.0914077758789062,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0914077758789062,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "accepted_tokens_per_seq": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 4
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 9,
+      "batch_id": "draft-9",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.261812,
+      "draft_end_ts": 1778683719.263903,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.261812,
+      "total_iteration_end_ts": 1778683719.263903,
+      "draft_time_ms": 2.090930938720703,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.090930938720703,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 3,
+      "batch_id": "verify-3",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778683719.2619019,
+      "verify_end_ts": 1778683719.2734828,
+      "total_iteration_start_ts": 1778683719.2619019,
+      "total_iteration_end_ts": 1778683719.2734828,
+      "draft_time_ms": 0.0,
+      "verify_time_ms": 11.580944061279297,
+      "total_iteration_time_ms": 11.580944061279297,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 10,
+      "batch_id": "draft-10",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2640536,
+      "draft_end_ts": 1778683719.2661388,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2640536,
+      "total_iteration_end_ts": 1778683719.2661388,
+      "draft_time_ms": 2.0852088928222656,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0852088928222656,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 11,
+      "batch_id": "draft-11",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2662866,
+      "draft_end_ts": 1778683719.2683816,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2662866,
+      "total_iteration_end_ts": 1778683719.2683816,
+      "draft_time_ms": 2.0949840545654297,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0949840545654297,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 12,
+      "batch_id": "draft-12",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2685356,
+      "draft_end_ts": 1778683719.2706285,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2685356,
+      "total_iteration_end_ts": 1778683719.2706285,
+      "draft_time_ms": 2.0928382873535156,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0928382873535156,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 13,
+      "batch_id": "draft-13",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2736044,
+      "draft_end_ts": 1778683719.2756903,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2736044,
+      "total_iteration_end_ts": 1778683719.2756903,
+      "draft_time_ms": 2.0859241485595703,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0859241485595703,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 4,
+      "batch_id": "verify-4",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778683719.2736673,
+      "verify_end_ts": 1778683719.2855306,
+      "total_iteration_start_ts": 1778683719.2736673,
+      "total_iteration_end_ts": 1778683719.2855306,
+      "draft_time_ms": 0.0,
+      "verify_time_ms": 11.863231658935547,
+      "total_iteration_time_ms": 11.863231658935547,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 14,
+      "batch_id": "draft-14",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2758403,
+      "draft_end_ts": 1778683719.2779276,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2758403,
+      "total_iteration_end_ts": 1778683719.2779276,
+      "draft_time_ms": 2.0873546600341797,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0873546600341797,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 15,
+      "batch_id": "draft-15",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.278074,
+      "draft_end_ts": 1778683719.2801619,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.278074,
+      "total_iteration_end_ts": 1778683719.2801619,
+      "draft_time_ms": 2.087831497192383,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.087831497192383,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 16,
+      "batch_id": "draft-16",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.28031,
+      "draft_end_ts": 1778683719.2824044,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.28031,
+      "total_iteration_end_ts": 1778683719.2824044,
+      "draft_time_ms": 2.0945072174072266,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0945072174072266,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 17,
+      "batch_id": "draft-17",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.28565,
+      "draft_end_ts": 1778683719.2877367,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.28565,
+      "total_iteration_end_ts": 1778683719.2877367,
+      "draft_time_ms": 2.086639404296875,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.086639404296875,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 5,
+      "batch_id": "verify-5",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778683719.2857163,
+      "verify_end_ts": 1778683719.2973073,
+      "total_iteration_start_ts": 1778683719.2857163,
+      "total_iteration_end_ts": 1778683719.2973073,
+      "draft_time_ms": 0.0,
+      "verify_time_ms": 11.590957641601562,
+      "total_iteration_time_ms": 11.590957641601562,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 18,
+      "batch_id": "draft-18",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2878845,
+      "draft_end_ts": 1778683719.2899704,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2878845,
+      "total_iteration_end_ts": 1778683719.2899704,
+      "draft_time_ms": 2.0859241485595703,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0859241485595703,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 19,
+      "batch_id": "draft-19",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2901218,
+      "draft_end_ts": 1778683719.2922106,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2901218,
+      "total_iteration_end_ts": 1778683719.2922106,
+      "draft_time_ms": 2.088785171508789,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.088785171508789,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 20,
+      "batch_id": "draft-20",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2923589,
+      "draft_end_ts": 1778683719.2944484,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2923589,
+      "total_iteration_end_ts": 1778683719.2944484,
+      "draft_time_ms": 2.0895004272460938,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0895004272460938,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 21,
+      "batch_id": "draft-21",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2974265,
+      "draft_end_ts": 1778683719.2995112,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2974265,
+      "total_iteration_end_ts": 1778683719.2995112,
+      "draft_time_ms": 2.0847320556640625,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0847320556640625,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 6,
+      "batch_id": "verify-6",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778683719.2974944,
+      "verify_end_ts": 1778683719.3090498,
+      "total_iteration_start_ts": 1778683719.2974944,
+      "total_iteration_end_ts": 1778683719.3090498,
+      "draft_time_ms": 0.0,
+      "verify_time_ms": 11.55543327331543,
+      "total_iteration_time_ms": 11.55543327331543,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "accepted_tokens_per_seq": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 1
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 22,
+      "batch_id": "draft-22",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.2996604,
+      "draft_end_ts": 1778683719.3017426,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.2996604,
+      "total_iteration_end_ts": 1778683719.3017426,
+      "draft_time_ms": 2.0821094512939453,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0821094512939453,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 23,
+      "batch_id": "draft-23",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.3018892,
+      "draft_end_ts": 1778683719.3039744,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.3018892,
+      "total_iteration_end_ts": 1778683719.3039744,
+      "draft_time_ms": 2.0852088928222656,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0852088928222656,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 24,
+      "batch_id": "draft-24",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.3041236,
+      "draft_end_ts": 1778683719.3062105,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.3041236,
+      "total_iteration_end_ts": 1778683719.3062105,
+      "draft_time_ms": 2.0868778228759766,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0868778228759766,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "accepted_tokens_per_seq": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 1
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 25,
+      "batch_id": "draft-25",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.3091629,
+      "draft_end_ts": 1778683719.3112493,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.3091629,
+      "total_iteration_end_ts": 1778683719.3112493,
+      "draft_time_ms": 2.0864009857177734,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0864009857177734,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 7,
+      "batch_id": "verify-7",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778683719.3092299,
+      "verify_end_ts": 1778683719.3207605,
+      "total_iteration_start_ts": 1778683719.3092299,
+      "total_iteration_end_ts": 1778683719.3207605,
+      "draft_time_ms": 0.0,
+      "verify_time_ms": 11.530637741088867,
+      "total_iteration_time_ms": 11.530637741088867,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "accepted_tokens_per_seq": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 4
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 26,
+      "batch_id": "draft-26",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.311407,
+      "draft_end_ts": 1778683719.3134942,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.311407,
+      "total_iteration_end_ts": 1778683719.3134942,
+      "draft_time_ms": 2.087116241455078,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.087116241455078,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 27,
+      "batch_id": "draft-27",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.3136413,
+      "draft_end_ts": 1778683719.3157237,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.3136413,
+      "total_iteration_end_ts": 1778683719.3157237,
+      "draft_time_ms": 2.082347869873047,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.082347869873047,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "accepted_tokens_per_seq": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 0
+    },
+    {
+      "execution_mode": "parallel_pearl",
+      "decode_ready_mode": true,
+      "iteration_id": 28,
+      "batch_id": "draft-28",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        0
+      ],
+      "num_seqs_in_batch": 1,
+      "is_prefill": false,
+      "draft_start_ts": 1778683719.3158717,
+      "draft_end_ts": 1778683719.317957,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "total_iteration_start_ts": 1778683719.3158717,
+      "total_iteration_end_ts": 1778683719.317957,
+      "draft_time_ms": 2.0852088928222656,
+      "verify_time_ms": 0.0,
+      "total_iteration_time_ms": 2.0852088928222656,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "accepted_tokens_per_seq": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      },
+      "total_accepted_tokens": 4
+    }
+  ],
+  "requests": [
+    {
+      "seq_id": 0,
+      "request_id": 0,
+      "arrival_ts": 1778683719.1430728,
+      "first_token_ts": 1778683719.1917307,
+      "finish_ts": 1778683719.2734485,
+      "decode_ready_ts": 1778683719.1917474,
+      "decode_start_ts": 1778683719.1920278,
+      "decode_ready_mode": true,
+      "num_decode_ready_prefill_tokens": 1,
+      "num_decode_output_tokens": 15,
+      "decode_elapsed_ms": 81.4206600189209,
+      "observed_tpot_ms": 5.4280440012613935,
+      "slo_tpot_ms": null,
+      "slo_class": null,
+      "per_request_gamma": null,
+      "trace_stats": {
+        "scheduled_iterations": [
+          {
+            "iteration_id": 0,
+            "batch_id": "verify_prefill-0",
+            "is_prefill": true,
+            "runner_role": "verify_prefill"
+          },
+          {
+            "iteration_id": 1,
+            "batch_id": "verify-1",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 2,
+            "batch_id": "verify-2",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 3,
+            "batch_id": "verify-3",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 4,
+            "batch_id": "verify-4",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 5,
+            "batch_id": "verify-5",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 6,
+            "batch_id": "verify-6",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 7,
+            "batch_id": "verify-7",
+            "is_prefill": false,
+            "runner_role": "verify"
+          }
+        ],
+        "accepted_tokens": 11,
+        "invalidated_predraft_tokens": 12
+      }
+    }
+  ]
+}
