@@ -1,6 +1,7 @@
 import os
 from nano_pearl.utils.pearl_logger import logger, get_model_name
 from dataclasses import dataclass
+from typing import ClassVar
 from transformers import AutoConfig
 import torch.distributed as dist
 
@@ -68,6 +69,7 @@ class BaseConfig:
 
 @dataclass
 class PEARLConfig:
+    ALLOWED_EXECUTION_MODES: ClassVar[set[str]] = {"ar", "serialized_pearl", "parallel_pearl"}
     draft_model_path: str
     target_model_path: str
     draft_tensor_parallel_size: int = 2
@@ -82,7 +84,14 @@ class PEARLConfig:
     num_kvcache_blocks: int = -1
     enforce_eager: bool = False
     gamma: int = -1
+    execution_mode: str = "parallel_pearl"
+
     def __post_init__(self):
+        if self.execution_mode not in self.ALLOWED_EXECUTION_MODES:
+            raise ValueError(
+                f"Invalid execution_mode={self.execution_mode!r}. "
+                f"Expected one of {sorted(self.ALLOWED_EXECUTION_MODES)}."
+            )
         logger.info("="*50)
         logger.info(f"Loading Draft Config:")
         draft_devices = list(range(self.draft_tensor_parallel_size))
@@ -99,6 +108,7 @@ class PEARLConfig:
         logger.info(f"GPU_Memory_Utilization={self.gpu_memory_utilization}")
         logger.info(f"Enforce_Eager={self.enforce_eager}")
         logger.info(f"Gamma (Window_Size)={self.gamma}, [-1 means auto-set]")
+        logger.info(f"Execution_Mode={self.execution_mode}")
         assert self.draft_config.eos == self.target_config.eos
         assert (self.draft_config.tensor_parallel_size + self.target_config.tensor_parallel_size) <= 8
         assert self.max_num_batched_tokens >= self.max_model_len

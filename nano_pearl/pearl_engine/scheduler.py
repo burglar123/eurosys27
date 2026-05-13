@@ -22,6 +22,12 @@ class Scheduler:
         self.waiting: deque[Sequence] = deque()
         self.running: deque[Sequence] = deque()
         self.finished: list[Sequence] = []
+        self.iteration_id = 0
+
+    def next_batch_id(self, runner_role: str) -> tuple[int, str]:
+        iteration_id = self.iteration_id
+        self.iteration_id += 1
+        return iteration_id, f"{runner_role}-{iteration_id}"
 
     def is_finished(self):
         return not self.waiting and not self.running
@@ -75,7 +81,7 @@ class Scheduler:
         for seq, token_id in zip(seqs, token_ids):
             seq.append_token(token_id)
             if (not seq.ignore_eos and is_eos(token_id, self.eos)) or seq.num_completion_tokens == seq.max_tokens:
-                seq.status = SequenceStatus.FINISHED
+                seq.mark_finished()
                 self.block_manager.deallocate(seq)
                 self.running.remove(seq)
                 self.finished.append(seq)
@@ -93,6 +99,7 @@ class Scheduler:
         while self.finished:
             seq = self.finished.pop()
             self.block_manager.deallocate(seq)
+        self.iteration_id = 0
         self.block_manager.hash_to_block_id.clear()
         for block in self.block_manager.blocks:
             block.hash = -1
