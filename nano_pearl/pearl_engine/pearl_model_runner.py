@@ -948,7 +948,7 @@ class TargetModelRunner(ModelRunnerBase):
                     seq.pre_verify = True
                     if rollout[idx] > 1:
                         self.scheduler.rollback(seq, rollout[idx] - 1)
-                    seq.append_token(revise_token[idx])        
+                    seq.mark_finished()       
         
             if finish[idx]:
                 seq.mark_finished()

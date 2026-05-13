@@ -1,0 +1,1928 @@
+{
+  "traces": [
+    {
+      "iteration_id": 0,
+      "batch_id": "verify_prefill-0",
+      "runner_role": "verify_prefill",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": true,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656451.0116155,
+      "verify_end_ts": 1778656452.5758092,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 0,
+      "batch_id": "draft_prefill-0",
+      "runner_role": "draft_prefill",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": true,
+      "draft_start_ts": 1778656451.0116196,
+      "draft_end_ts": 1778656452.568206,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 1,
+      "batch_id": "draft-1",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.5684695,
+      "draft_end_ts": 1778656452.5708745,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 2,
+      "batch_id": "draft-2",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.5710528,
+      "draft_end_ts": 1778656452.5731735,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 3,
+      "batch_id": "draft-3",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.5733325,
+      "draft_end_ts": 1778656452.5754318,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 4,
+      "batch_id": "draft-4",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.5755835,
+      "draft_end_ts": 1778656452.5776784,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 1,
+      "batch_id": "verify-1",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.576073,
+      "verify_end_ts": 1778656452.6260343,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 5,
+      "batch_id": "draft-5",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.626168,
+      "draft_end_ts": 1778656452.628364,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 2,
+      "batch_id": "verify-2",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.6263108,
+      "verify_end_ts": 1778656452.6460886,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 6,
+      "batch_id": "draft-6",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6285288,
+      "draft_end_ts": 1778656452.6306374,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 7,
+      "batch_id": "draft-7",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6307957,
+      "draft_end_ts": 1778656452.6328928,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 8,
+      "batch_id": "draft-8",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6330402,
+      "draft_end_ts": 1778656452.635136,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 9,
+      "batch_id": "draft-9",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6461847,
+      "draft_end_ts": 1778656452.6482859,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 3,
+      "batch_id": "verify-3",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.6462982,
+      "verify_end_ts": 1778656452.6579149,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      }
+    },
+    {
+      "iteration_id": 10,
+      "batch_id": "draft-10",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6484325,
+      "draft_end_ts": 1778656452.6505287,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 11,
+      "batch_id": "draft-11",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6506732,
+      "draft_end_ts": 1778656452.6527693,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 12,
+      "batch_id": "draft-12",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6529148,
+      "draft_end_ts": 1778656452.6550105,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      }
+    },
+    {
+      "iteration_id": 13,
+      "batch_id": "draft-13",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6580157,
+      "draft_end_ts": 1778656452.6601129,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 4,
+      "batch_id": "verify-4",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.6581001,
+      "verify_end_ts": 1778656452.6698246,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      }
+    },
+    {
+      "iteration_id": 14,
+      "batch_id": "draft-14",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6602666,
+      "draft_end_ts": 1778656452.6623633,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 15,
+      "batch_id": "draft-15",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6625068,
+      "draft_end_ts": 1778656452.664604,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 16,
+      "batch_id": "draft-16",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.664747,
+      "draft_end_ts": 1778656452.6668422,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      }
+    },
+    {
+      "iteration_id": 17,
+      "batch_id": "draft-17",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6699357,
+      "draft_end_ts": 1778656452.6720295,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 5,
+      "batch_id": "verify-5",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.670003,
+      "verify_end_ts": 1778656452.6815937,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      }
+    },
+    {
+      "iteration_id": 18,
+      "batch_id": "draft-18",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.672172,
+      "draft_end_ts": 1778656452.6742716,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 19,
+      "batch_id": "draft-19",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6744142,
+      "draft_end_ts": 1778656452.6765084,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 20,
+      "batch_id": "draft-20",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6766508,
+      "draft_end_ts": 1778656452.6787431,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      }
+    },
+    {
+      "iteration_id": 21,
+      "batch_id": "draft-21",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6817055,
+      "draft_end_ts": 1778656452.6838002,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 6,
+      "batch_id": "verify-6",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.6817713,
+      "verify_end_ts": 1778656452.6933253,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 22,
+      "batch_id": "draft-22",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.683944,
+      "draft_end_ts": 1778656452.6860354,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 23,
+      "batch_id": "draft-23",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6861784,
+      "draft_end_ts": 1778656452.688278,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 24,
+      "batch_id": "draft-24",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.688422,
+      "draft_end_ts": 1778656452.6905122,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 25,
+      "batch_id": "draft-25",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6934347,
+      "draft_end_ts": 1778656452.6955273,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 7,
+      "batch_id": "verify-7",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.6935027,
+      "verify_end_ts": 1778656452.7050352,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 26,
+      "batch_id": "draft-26",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6956723,
+      "draft_end_ts": 1778656452.697768,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 27,
+      "batch_id": "draft-27",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.6979182,
+      "draft_end_ts": 1778656452.7000132,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 28,
+      "batch_id": "draft-28",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7001562,
+      "draft_end_ts": 1778656452.7022583,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 29,
+      "batch_id": "draft-29",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7051392,
+      "draft_end_ts": 1778656452.707243,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 8,
+      "batch_id": "verify-8",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.7052283,
+      "verify_end_ts": 1778656452.716758,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 30,
+      "batch_id": "draft-30",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.707385,
+      "draft_end_ts": 1778656452.7094786,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 31,
+      "batch_id": "draft-31",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7096212,
+      "draft_end_ts": 1778656452.7117145,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 32,
+      "batch_id": "draft-32",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7118566,
+      "draft_end_ts": 1778656452.7139459,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 33,
+      "batch_id": "draft-33",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7168589,
+      "draft_end_ts": 1778656452.718952,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 9,
+      "batch_id": "verify-9",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.7169335,
+      "verify_end_ts": 1778656452.7284837,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 34,
+      "batch_id": "draft-34",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7190933,
+      "draft_end_ts": 1778656452.7211843,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 35,
+      "batch_id": "draft-35",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7213323,
+      "draft_end_ts": 1778656452.7234228,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 36,
+      "batch_id": "draft-36",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.723566,
+      "draft_end_ts": 1778656452.7256596,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 37,
+      "batch_id": "draft-37",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7285914,
+      "draft_end_ts": 1778656452.7306874,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 10,
+      "batch_id": "verify-10",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.728658,
+      "verify_end_ts": 1778656452.7402358,
+      "per_seq_accepted_len": {
+        "0": 2
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 2
+      }
+    },
+    {
+      "iteration_id": 38,
+      "batch_id": "draft-38",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7308316,
+      "draft_end_ts": 1778656452.7329247,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 39,
+      "batch_id": "draft-39",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7330694,
+      "draft_end_ts": 1778656452.7351658,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 40,
+      "batch_id": "draft-40",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7353184,
+      "draft_end_ts": 1778656452.7374103,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 2
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 2
+      }
+    },
+    {
+      "iteration_id": 41,
+      "batch_id": "draft-41",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7403393,
+      "draft_end_ts": 1778656452.742437,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 11,
+      "batch_id": "verify-11",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.74041,
+      "verify_end_ts": 1778656452.7519958,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      }
+    },
+    {
+      "iteration_id": 42,
+      "batch_id": "draft-42",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.742586,
+      "draft_end_ts": 1778656452.744682,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 43,
+      "batch_id": "draft-43",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7448254,
+      "draft_end_ts": 1778656452.7469158,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 44,
+      "batch_id": "draft-44",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.747059,
+      "draft_end_ts": 1778656452.7491517,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      }
+    },
+    {
+      "iteration_id": 45,
+      "batch_id": "draft-45",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7521007,
+      "draft_end_ts": 1778656452.7541966,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 12,
+      "batch_id": "verify-12",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.7521706,
+      "verify_end_ts": 1778656452.763733,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 46,
+      "batch_id": "draft-46",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.754345,
+      "draft_end_ts": 1778656452.756437,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 47,
+      "batch_id": "draft-47",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7565868,
+      "draft_end_ts": 1778656452.7586782,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 48,
+      "batch_id": "draft-48",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7588227,
+      "draft_end_ts": 1778656452.7609203,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 49,
+      "batch_id": "draft-49",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7638383,
+      "draft_end_ts": 1778656452.7659318,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 13,
+      "batch_id": "verify-13",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.7639093,
+      "verify_end_ts": 1778656452.7754614,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 3
+      }
+    },
+    {
+      "iteration_id": 50,
+      "batch_id": "draft-50",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7660751,
+      "draft_end_ts": 1778656452.7681696,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 51,
+      "batch_id": "draft-51",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7683187,
+      "draft_end_ts": 1778656452.7704108,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 52,
+      "batch_id": "draft-52",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7705545,
+      "draft_end_ts": 1778656452.7726474,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 3
+      }
+    },
+    {
+      "iteration_id": 53,
+      "batch_id": "draft-53",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7755702,
+      "draft_end_ts": 1778656452.7776675,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 14,
+      "batch_id": "verify-14",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.775631,
+      "verify_end_ts": 1778656452.7872093,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      }
+    },
+    {
+      "iteration_id": 54,
+      "batch_id": "draft-54",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7778113,
+      "draft_end_ts": 1778656452.7799063,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 55,
+      "batch_id": "draft-55",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7800503,
+      "draft_end_ts": 1778656452.7821445,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 56,
+      "batch_id": "draft-56",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7822924,
+      "draft_end_ts": 1778656452.784387,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 4
+      }
+    },
+    {
+      "iteration_id": 57,
+      "batch_id": "draft-57",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.787321,
+      "draft_end_ts": 1778656452.7894151,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 15,
+      "batch_id": "verify-15",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.7873871,
+      "verify_end_ts": 1778656452.7989244,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 58,
+      "batch_id": "draft-58",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7895608,
+      "draft_end_ts": 1778656452.7916574,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 59,
+      "batch_id": "draft-59",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.791801,
+      "draft_end_ts": 1778656452.793894,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 60,
+      "batch_id": "draft-60",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.794039,
+      "draft_end_ts": 1778656452.79613,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 1
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 61,
+      "batch_id": "draft-61",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.7990315,
+      "draft_end_ts": 1778656452.801124,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 16,
+      "batch_id": "verify-16",
+      "runner_role": "verify",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": null,
+      "draft_end_ts": null,
+      "verify_start_ts": 1778656452.7990966,
+      "verify_end_ts": 1778656452.8106306,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 62,
+      "batch_id": "draft-62",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.8012729,
+      "draft_end_ts": 1778656452.8033683,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 63,
+      "batch_id": "draft-63",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.80351,
+      "draft_end_ts": 1778656452.8056026,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 0
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    },
+    {
+      "iteration_id": 64,
+      "batch_id": "draft-64",
+      "runner_role": "draft",
+      "scheduled_seq_ids": [
+        0
+      ],
+      "request_ids": [
+        "req-0001"
+      ],
+      "is_prefill": false,
+      "draft_start_ts": 1778656452.8057458,
+      "draft_end_ts": 1778656452.8078358,
+      "verify_start_ts": null,
+      "verify_end_ts": null,
+      "per_seq_accepted_len": {
+        "0": 4
+      },
+      "per_seq_invalidated_predraft_len": {
+        "0": 0
+      }
+    }
+  ],
+  "requests": [
+    {
+      "seq_id": 0,
+      "request_id": "req-0001",
+      "arrival_ts": 1778656450.9902298,
+      "first_token_ts": 1778656452.575798,
+      "finish_ts": 1778656452.6578782,
+      "slo_tpot_ms": 50.0,
+      "slo_class": "normal",
+      "per_request_gamma": 4,
+      "trace_stats": {
+        "scheduled_iterations": [
+          {
+            "iteration_id": 0,
+            "batch_id": "verify_prefill-0",
+            "is_prefill": true,
+            "runner_role": "verify_prefill"
+          },
+          {
+            "iteration_id": 1,
+            "batch_id": "verify-1",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 2,
+            "batch_id": "verify-2",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 3,
+            "batch_id": "verify-3",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 4,
+            "batch_id": "verify-4",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 5,
+            "batch_id": "verify-5",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 6,
+            "batch_id": "verify-6",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 7,
+            "batch_id": "verify-7",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 8,
+            "batch_id": "verify-8",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 9,
+            "batch_id": "verify-9",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 10,
+            "batch_id": "verify-10",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 11,
+            "batch_id": "verify-11",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 12,
+            "batch_id": "verify-12",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 13,
+            "batch_id": "verify-13",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 14,
+            "batch_id": "verify-14",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 15,
+            "batch_id": "verify-15",
+            "is_prefill": false,
+            "runner_role": "verify"
+          },
+          {
+            "iteration_id": 16,
+            "batch_id": "verify-16",
+            "is_prefill": false,
+            "runner_role": "verify"
+          }
+        ],
+        "accepted_tokens": 28,
+        "invalidated_predraft_tokens": 25
+      }
+    }
+  ]
+}
