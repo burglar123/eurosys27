@@ -46,6 +46,16 @@ class Controller:
         self.target_shm.buf[4:n+4] = data
         for event in self.target_event:
             event.set()
+
+    def read_payload(self, shm: SharedMemory):
+        n = int.from_bytes(shm.buf[0:4], "little")
+        data = shm.buf[4:n+4]
+        payload = pickle.loads(data)
+        if len(payload) == 2:
+            output, elapsed_time = payload
+            return output, elapsed_time, [], []
+        output, elapsed_time, traces, service_metadata = payload
+        return output, elapsed_time, traces, service_metadata
     
     def read_payload(self, shm: SharedMemory):
         n = int.from_bytes(shm.buf[0:4], "little")
