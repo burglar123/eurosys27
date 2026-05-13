@@ -13,6 +13,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from nano_pearl import PEARLConfig, PEARLEngine, SamplingParams, logger
 import copy
 
+EXECUTION_MODES = ("ar", "serialized_pearl", "parallel_pearl")
+
 
 def parse_args():
     """Parse command line arguments"""
@@ -38,7 +40,9 @@ def parse_args():
     parser.add_argument('--max-tokens', type=int, default=200,
                        help='Maximum tokens to generate (default: 200)')
     parser.add_argument('--num-pearl-steps', type=int, default=100, 
-                       help='Number of PEARL steps for bench_generate in evaluation (default: 100)')
+                       help='Number of PEARL steps for speculative bench generation in evaluation (default: 100)')
+    parser.add_argument('--execution-mode', choices=EXECUTION_MODES, default='parallel_pearl',
+                       help='Execution mode: ar, serialized_pearl approximation baseline, or current parallel_pearl (default: parallel_pearl)')
     parser.add_argument('--ignore-eos', '-noeos', action='store_true',
                        help='Ignore EOS token (default: False)')
     
@@ -88,8 +92,20 @@ def extract_prompts(data: List[Dict[str, Any]], dataset_name: str) -> List[str]:
     return prompts
 
 
+def run_generation(engine: PEARLEngine, execution_mode: str, num_pearl_steps: int):
+    if execution_mode == "parallel_pearl":
+        return engine.bench_generate(num_pearl_steps=num_pearl_steps)
+    if execution_mode == "serialized_pearl":
+        logger.info("Running serialized_pearl approximation baseline; this is not vanilla serial speculative decoding.")
+        return engine.serialized_pearl_bench_generate(num_pearl_steps=num_pearl_steps)
+    if execution_mode == "ar":
+        output_text, num_tokens, _, elapsed_time = engine.AR_generate()
+        return output_text, num_tokens, None, elapsed_time
+    raise ValueError(f"Unknown execution_mode={execution_mode!r}")
+
+
 def run_benchmark(engine: PEARLEngine, prompts: List[str], sampling_params: SamplingParams, 
-                 dataset_name: str, batch_size: int = 1, run_ar: bool = False, num_pearl_steps: int = 100) -> Tuple[List[str], Dict[str, float], float]:
+                 dataset_name: str, batch_size: int = 1, run_ar: bool = False, num_pearl_steps: int = 100, execution_mode: str = "parallel_pearl") -> Tuple[List[str], Dict[str, float], float]:
     """Run benchmark test"""
     logger.info(f"Starting evaluation of {dataset_name} dataset, sample count: {len(prompts)}, batch size: {batch_size}")
     
@@ -112,22 +128,23 @@ def run_benchmark(engine: PEARLEngine, prompts: List[str], sampling_params: Samp
         for prompt in batch_prompts:
             engine.add_request(prompt, copy.deepcopy(sampling_params))
         
-        # PEARL generation
-        output_text, num_tokens, num_acc_tokens, elapsed_time = engine.bench_generate(num_pearl_steps=num_pearl_steps)
+        # Selected generation mode
+        output_text, num_tokens, num_acc_tokens, elapsed_time = run_generation(engine, execution_mode, num_pearl_steps)
         
         # Accumulate results
         all_outputs.extend(output_text)
         all_num_tokens.extend(num_tokens)
-        all_num_acc_tokens.extend(num_acc_tokens)
+        if num_acc_tokens is not None:
+            all_num_acc_tokens.extend(num_acc_tokens)
         total_elapsed_time += elapsed_time
     
     # Calculate overall metrics
     MAT = [sum(n) / len(n) for n in all_num_acc_tokens] if all_num_acc_tokens else [0]
     global_MAT = sum(MAT) / len(MAT)
-    pearl_throughput = sum(all_num_tokens) / total_elapsed_time if total_elapsed_time > 0 else 0
+    selected_throughput = sum(all_num_tokens) / total_elapsed_time if total_elapsed_time > 0 else 0
     
-    logger.info(f"[PEARL] Total tokens: {sum(all_num_tokens)}, time: {total_elapsed_time:.2f}s, "
-               f"throughput: {pearl_throughput:.2f} tok/s, global MAT: {global_MAT}")
+    logger.info(f"[{execution_mode}] Total tokens: {sum(all_num_tokens)}, time: {total_elapsed_time:.2f}s, "
+               f"throughput: {selected_throughput:.2f} tok/s, global MAT: {global_MAT}")
     
     # AR generation (if requested)
     ar_throughput = 0
@@ -158,15 +175,17 @@ def run_benchmark(engine: PEARLEngine, prompts: List[str], sampling_params: Samp
                    f"throughput: {ar_throughput:.2f} tok/s")
         
         if ar_throughput > 0:
-            speedup = pearl_throughput / ar_throughput
-            logger.info(f"PEARL speedup: {speedup:.2f}x")
+            speedup = selected_throughput / ar_throughput
+            logger.info(f"{execution_mode} speedup vs AR: {speedup:.2f}x")
     
     # Calculate basic metrics
     metrics = {
         'num_samples': len(all_outputs),
-        'pearl_throughput': pearl_throughput,
+        'selected_mode': execution_mode,
+        'selected_throughput': selected_throughput,
+        'pearl_throughput': selected_throughput,
         'ar_throughput': ar_throughput,
-        'speedup': pearl_throughput / ar_throughput if ar_throughput > 0 else 0
+        'speedup': selected_throughput / ar_throughput if ar_throughput > 0 else 0
     }
     
     return all_outputs, metrics, total_elapsed_time
@@ -186,6 +205,7 @@ def main():
         draft_tensor_parallel_size=args.draft_tp, 
         target_tensor_parallel_size=args.target_tp, 
         gpu_memory_utilization=args.gpu_memory_utilization,
+        execution_mode=args.execution_mode,
     )
     engine = PEARLEngine(config)
     
@@ -248,7 +268,7 @@ def main():
         
         # Run benchmark test
         outputs, metrics, elapsed_time = run_benchmark(
-            engine, prompts, sampling_params, dataset_name, args.bs, args.run_ar_benchmark, args.num_pearl_steps
+            engine, prompts, sampling_params, dataset_name, args.bs, args.run_ar_benchmark, args.num_pearl_steps, args.execution_mode
         )
         
         # Store results
@@ -273,7 +293,8 @@ def main():
         for dataset_name, results in all_results.items():
             print(f"\n{dataset_name}:")
             print(f"  Sample count: {results['num_samples']}")
-            print(f"  PEARL throughput: {results['metrics']['pearl_throughput']:.2f} tok/s")
+            print(f"  Execution mode: {results['metrics']['selected_mode']}")
+            print(f"  Selected-mode throughput: {results['metrics']['selected_throughput']:.2f} tok/s")
             if results['metrics']['ar_throughput'] > 0:
                 print(f"  AR throughput: {results['metrics']['ar_throughput']:.2f} tok/s")
                 print(f"  Speedup: {results['metrics']['speedup']:.2f}x")
