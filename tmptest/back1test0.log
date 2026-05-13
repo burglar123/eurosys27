@@ -1,0 +1,60 @@
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m ==================================================                                                            
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m Loading Draft Config:                                                                                         
+[2;36m15:13:45[0m[2;36m [0m[33mWARNING [0m Model Name Not Found: [35m/root/autodl-tmp/models/[0m[95mQwen3-0.6B[0m                                                      
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mModel[0m=[35m/root/autodl-tmp/models/[0m[95mQwen3-0.6B[0m                                                                      
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mTP[0m=[1;36m1[0m                                                                                                          
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mDevices[0m=[1m[[0m[1;36m0[0m[1m][0m                                                                                                   
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mGroupName[0m=[35mdraft_group[0m                                                                                         
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mArchitectures[0m=[35mQwen3ForCausalLM[0m                                                                                
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mVocab_Size[0m=[1;36m151936[0m                                                                                             
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mEos[0m=[1;36m151645[0m                                                                                                    
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m ==================================================                                                            
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m Loading Target Config:                                                                                        
+[2;36m15:13:45[0m[2;36m [0m[33mWARNING [0m Model Name Not Found: [35m/root/autodl-tmp/models/[0m[95mQwen3-8B[0m                                                        
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mModel[0m=[35m/root/autodl-tmp/models/[0m[95mQwen3-8B[0m                                                                        
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mTP[0m=[1;36m1[0m                                                                                                          
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mDevices[0m=[1m[[0m[1;36m1[0m[1m][0m                                                                                                   
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mGroupName[0m=[35mtarget_group[0m                                                                                        
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mArchitectures[0m=[35mQwen3ForCausalLM[0m                                                                                
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mVocab_Size[0m=[1;36m151936[0m                                                                                             
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mEos[0m=[1;36m151645[0m                                                                                                    
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m ==================================================                                                            
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m Global_Config:                                                                                                
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mMax_Num_Batched_Tokens[0m=[1;36m8192[0m                                                                                   
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mMax_Num_Seqs[0m=[1;36m128[0m                                                                                              
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mMax_Model_Len[0m=[1;36m4096[0m                                                                                            
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mGPU_Memory_Utilization[0m=[1;36m0[0m[1;36m.9[0m                                                                                    
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mEnforce_Eager[0m=[3;91mFalse[0m                                                                                           
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m Gamma [1m([0mWindow_Size[1m)[0m=[1;36m4[0m, [1m[[0m[1;36m-1[0m means auto-set[1m][0m                                                                    
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [33mWorld_Size[0m=[1;36m2[0m                                                                                                  
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m ==================================================                                                            
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [1m[[0mMain Process[1m][0m EOS token id: [1;36m151645[0m, EOS tokens: [1m<[0m[1;95m|im_end|[0m[1m>[0m                                                   
+[2;36m15:13:45[0m[2;36m [0m[32mINFO    [0m [1;31m[[0m[31mMain Process[0m[1;31m][0m[31m Waiting for the initialization of the draft and target TP models[0m[33m...[0m                            
+[rank1]:[W513 15:13:50.898332864 ProcessGroupNCCL.cpp:4715] [PG ID 0 PG GUID 0 Rank 1]  using GPU 1 as device used by this process is currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. You can pecify device_id in init_process_group() to force use of a particular device.
+[rank0]:[W513 15:13:50.910520041 ProcessGroupNCCL.cpp:4715] [PG ID 0 PG GUID 0 Rank 0]  using GPU 0 as device used by this process is currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. You can pecify device_id in init_process_group() to force use of a particular device.
+`torch_dtype` is deprecated! Use `dtype` instead!
+[2;36m15:13:50[0m[2;36m [0m[32mINFO    [0m [34minitialized dist.[0m                                                                                                                                                                                                                                                                                                      
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading model:   0%|          | 0/1 [00:00<?, ?it/s]Loading model:   0%|          | 0/5 [00:00<?, ?it/s]Loading model: 100%|██████████| 1/1 [00:00<00:00,  1.27it/s]Loading model: 100%|██████████| 1/1 [00:00<00:00,  1.27it/s]
+Loading model:  20%|██        | 1/5 [00:02<00:09,  2.30s/it]Loading model:  40%|████      | 2/5 [00:04<00:06,  2.28s/it]Loading model:  60%|██████    | 3/5 [00:06<00:04,  2.26s/it]Loading model:  80%|████████  | 4/5 [00:08<00:02,  2.07s/it]Loading model: 100%|██████████| 5/5 [00:09<00:00,  1.58s/it]Loading model: 100%|██████████| 5/5 [00:09<00:00,  1.86s/it]
+[2;36m15:14:04[0m[2;36m [0m[32mINFO    [0m [1;32m[[0m[32mRank [0m[1;36m0[0m[32m: draft_group[0m[1;32m][0m[32m Num seqs: [0m[1;36m2[0m[32m Warmup finished.[0m                                                                                                                                                                                                                                                                     
+[2;36m15:14:04[0m[2;36m [0m[32mINFO    [0m [1;32m[[0m[32mRank [0m[1;36m1[0m[32m: target_group[0m[1;32m][0m[32m Num seqs: [0m[1;36m2[0m[32m Warmup finished.[0m                                                                                                                                                                                                                                                                    
+[2;36m15:14:04[0m[2;36m [0m[32mINFO    [0m [1;32m[[0m[32mRank [0m[1;36m0[0m[32m: draft_group[0m[1;32m][0m[32m allocated GPU memory [0m[1;36m68.82421875[0m[32m GiB for kvcache.[0m                                                                                                                                                                                                                                                
+[2;36m15:14:04[0m[2;36m [0m[32mINFO    [0m [1;32m[[0m[32mRank [0m[1;36m1[0m[32m: target_group[0m[1;32m][0m[32m allocated GPU memory [0m[1;36m54.4921875[0m[32m GiB for kvcache.[0m                                                                                                                                                                                                                                                
+[2;36m15:14:10[0m[2;36m [0m[32mINFO    [0m [34mCUDA graph captured.[0m                                                                                                                                                                                                                                                                                                   
+[2;36m15:14:10[0m[2;36m [0m[32mINFO    [0m [34mCUDA graph captured.[0m                                                                                                                                                                                                                                                                                                   
+[2;36m15:14:10[0m[2;36m [0m[32mINFO    [0m [32minitialized model, kvcache and scheduler. [0m                                                                                                                                                                                                                                                                             
+[2;36m15:14:10[0m[2;36m [0m[32mINFO    [0m [1;33m[[0m[33mSub-Process[0m[1;33m][0m[33m Draft Model and Target Model initialized. Starting to run the model[0m[33m...[0m                                                                                                                                                                                                                                   
+output_text: ['<think>\nOkay, the user asked me to explain speculative decoding briefly. Let me start by recalling what I know about this topic. Speculative decoding is a technique used in machine']
+num_tokens: [35]
+num_acc_tokens: ([6, 1, 1, 16, 1, 3, 1, 5],)
+elapsed_time: 1.7994556427001953
+trace dumped to trace.json
+Exception ignored in atexit callback: <bound method PEARLEngine.exit of <nano_pearl.pearl_engine.pearl_engine.PEARLEngine object at 0x7f4bcc816f00>>
+Traceback (most recent call last):
+  File "/root/rzwang/eurosys27/nano_pearl/pearl_engine/pearl_engine.py", line 125, in exit
+    self.controller.write_draft_shm("exit")
+  File "/root/rzwang/eurosys27/nano_pearl/pearl_engine/pearl_engine.py", line 37, in write_draft_shm
+    self.draft_shm.buf[0:4] = n.to_bytes(4, "little")
+    ~~~~~~~~~~~~~~~~~~^^^^^
+TypeError: 'NoneType' object does not support item assignment

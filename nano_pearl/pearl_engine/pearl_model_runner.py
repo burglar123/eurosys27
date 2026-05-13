@@ -107,6 +107,7 @@ class ModelRunnerBase:
         self.tokenizer = AutoTokenizer.from_pretrained(self.group_config.model)
         self.allocate_kv_cache()
         self.scheduler = Scheduler(self.global_config)
+        self.trace_records = []
         if not self.global_config.enforce_eager:
             self.capture_cudagraph()
         torch.set_default_dtype(self.default_dtype)
@@ -304,28 +305,93 @@ class ModelRunnerBase:
         self.scheduler.add(seq)
         dist.barrier()
 
+    def _runner_role(self):
+        return "draft" if self.is_draft else "verify"
+
+    def _trace_schedule(self, seqs: list[Sequence], is_prefill: bool, runner_role: str):
+        iteration_id, batch_id = self.scheduler.next_batch_id(runner_role)
+        for seq in seqs:
+            seq.mark_scheduled(iteration_id, batch_id, is_prefill, runner_role)
+        record = {
+            "iteration_id": iteration_id,
+            "batch_id": batch_id,
+            "runner_role": runner_role,
+            "scheduled_seq_ids": [seq.seq_id for seq in seqs],
+            "request_ids": [seq.request_id for seq in seqs],
+            "is_prefill": is_prefill,
+            "draft_start_ts": None,
+            "draft_end_ts": None,
+            "verify_start_ts": None,
+            "verify_end_ts": None,
+            "per_seq_accepted_len": {seq.seq_id: 0 for seq in seqs},
+            "per_seq_invalidated_predraft_len": {seq.seq_id: 0 for seq in seqs},
+        }
+        self.trace_records.append(record)
+        return record
+
+    def _mark_trace_start(self, record: dict):
+        if self.tp_params.local_rank != 0:
+            return
+        key = "draft_start_ts" if self.is_draft else "verify_start_ts"
+        record[key] = time.time()
+
+    def _mark_trace_end(self, record: dict, accepted_lens: dict[int, int] | None = None, invalidated_lens: dict[int, int] | None = None):
+        if self.tp_params.local_rank == 0:
+            key = "draft_end_ts" if self.is_draft else "verify_end_ts"
+            record[key] = time.time()
+        if accepted_lens:
+            record["per_seq_accepted_len"].update(accepted_lens)
+        if invalidated_lens:
+            record["per_seq_invalidated_predraft_len"].update(invalidated_lens)
+
+    def _service_metadata(self):
+        seqs = list(self.scheduler.waiting) + list(self.scheduler.running) + list(self.scheduler.finished)
+        return [seq.service_metadata() for seq in seqs]
+
+    def _write_generation_result(self, output, elapsed_time):
+        data = pickle.dumps([output, elapsed_time, self.trace_records, self._service_metadata()])
+        n = len(data)
+        self.shm.buf[0:4] = n.to_bytes(4, "little")
+        self.shm.buf[4:n+4] = data
+
     def prefill(self):
         seqs, is_prefill = self.scheduler.schedule()
+        trace_record = self._trace_schedule(seqs, is_prefill, f"{self._runner_role()}_prefill")
         assert is_prefill, "wrong match. current stage is decode."
         input_ids, positions = self.prepare_prefill(seqs)
         temperatures = self.prepare_sample(seqs) if self.tp_params.local_rank == 0 else None
+        torch.cuda.synchronize()
+        self._mark_trace_start(trace_record)
         logits = self.run_model(input_ids, positions, True)
         sample_tokens = self.sampler(logits, temperatures) if self.tp_params.local_rank == 0 else torch.zeros(len(seqs), dtype=torch.int64, pin_memory=True).cuda(non_blocking=True)
         dist.broadcast(sample_tokens, src=self.tp_params.master_rank, group=self.group)
+        torch.cuda.synchronize()
         token_ids = sample_tokens.tolist()
         reset_context(self.tp_params)
         self.scheduler.postprocess(seqs, token_ids)
+        accepted_lens = {seq.seq_id: 1 for seq in seqs}
+        for seq in seqs:
+            seq.record_accepted(1)
+        self._mark_trace_end(trace_record, accepted_lens=accepted_lens)
 
     def step(self):
         seqs, is_prefill = self.scheduler.schedule()
+        trace_record = self._trace_schedule(seqs, is_prefill, self._runner_role())
         input_ids, positions = self.prepare_prefill(seqs) if is_prefill else self.prepare_decode(seqs)
         temperatures = self.prepare_sample(seqs) if self.tp_params.local_rank == 0 else None
+        torch.cuda.synchronize()
+        self._mark_trace_start(trace_record)
         logits = self.run_model(input_ids, positions, is_prefill)
         sample_tokens = self.sampler(logits, temperatures) if self.tp_params.local_rank == 0 else torch.zeros(len(seqs), dtype=torch.int64, pin_memory=True).cuda(non_blocking=True)
         dist.broadcast(sample_tokens, src=self.tp_params.master_rank, group=self.group)
+        torch.cuda.synchronize()
         token_ids = sample_tokens.tolist()
         reset_context(self.tp_params)
         self.scheduler.postprocess(seqs, token_ids)
+        accepted_lens = {seq.seq_id: 1 for seq in seqs}
+        for seq in seqs:
+            seq.record_accepted(1)
+        self._mark_trace_end(trace_record, accepted_lens=accepted_lens)
         outputs = [(seq.seq_id, seq.completion_token_ids) for seq in seqs]
         num_tokens = sum(len(seq) for seq in seqs) if is_prefill else -len(seqs)
         return outputs, num_tokens
@@ -388,6 +454,7 @@ class ModelRunnerBase:
 
     def clear_requests(self):
         self.scheduler.clear()
+        self.trace_records.clear()
         dist.barrier()
 
     def parallel_generate(self):
@@ -404,10 +471,7 @@ class ModelRunnerBase:
         seqs = self.scheduler.finished
         output = [(seq.seq_id, seq.completion_token_ids, seq.num_acc_tokens) for seq in seqs]
         if self.tp_params.local_rank == 0:
-            data = pickle.dumps([output, end_time - start_time])
-            n = len(data)
-            self.shm.buf[0:4] = n.to_bytes(4, "little")
-            self.shm.buf[4:n+4] = data
+            self._write_generation_result(output, end_time - start_time)
         
         self.clear_requests()
 
@@ -429,11 +493,8 @@ class ModelRunnerBase:
         seqs = self.scheduler.finished
         output = [(seq.seq_id, seq.completion_token_ids, seq.num_acc_tokens) for seq in seqs]
 
-        if self.rank == self.global_config.target_config.master_rank:
-            data = pickle.dumps([output, end_time - start_time])
-            n = len(data)
-            self.shm.buf[0:4] = n.to_bytes(4, "little")
-            self.shm.buf[4:n+4] = data
+        if self.tp_params.local_rank == 0:
+            self._write_generation_result(output, end_time - start_time)
             
         self.clear_requests()
 
@@ -469,11 +530,8 @@ class ModelRunnerBase:
 
         output = [(seq.seq_id, seq.completion_token_ids, seq.num_acc_tokens) for seq in seqs]
 
-        if self.rank == self.global_config.target_config.master_rank:
-            data = pickle.dumps([output, end_time - start_time])
-            n = len(data)
-            self.shm.buf[0:4] = n.to_bytes(4, "little")
-            self.shm.buf[4:n+4] = data
+        if self.tp_params.local_rank == 0:
+            self._write_generation_result(output, end_time - start_time)
             
         self.clear_requests()
 
@@ -490,23 +548,32 @@ class DraftModelRunner(ModelRunnerBase):
         return super().prepare_decode(seqs)
     
     def pearl_step(self):
+        trace_record = None
         for _ in range(self.gamma):
             seqs, is_prefill = self.scheduler.schedule()
+            trace_record = self._trace_schedule(seqs, is_prefill, "draft")
             assert not is_prefill, "wrong match. current stage is prefill."
             input_ids, positions = self.prepare_pearl_decode(seqs)
+            torch.cuda.synchronize()
+            self._mark_trace_start(trace_record)
             logits = self.run_model(input_ids, positions, is_prefill)
             # Currently, the temperature of the draft model is set to 0 to avoid communication overhead.
             # We will support temperature in the future.
             sample_tokens = logits.argmax(dim=-1) if self.tp_params.local_rank == 0 else torch.zeros(len(seqs), dtype=torch.int64, pin_memory=True).cuda(non_blocking=True)
             dist.broadcast(sample_tokens, src=self.tp_params.master_rank, group=self.group)
+            torch.cuda.synchronize()
             token_ids = sample_tokens.tolist()
             reset_context(self.tp_params)
 
             # append the sample tokens to the seqs. Do not use postprocess to avoid early exiting when the draft tokens contain EOS.
             for seq, token_id in zip(seqs, token_ids):
                 seq.append_token(token_id)
+            self._mark_trace_end(trace_record)
 
-        self.verify(seqs)
+        accepted_lens, invalidated_lens = self.verify(seqs)
+        if trace_record is not None:
+            trace_record["per_seq_accepted_len"].update(accepted_lens)
+            trace_record["per_seq_invalidated_predraft_len"].update(invalidated_lens)
 
     @torch.inference_mode()
     def verify(self, seqs: list[Sequence]):
@@ -527,9 +594,21 @@ class DraftModelRunner(ModelRunnerBase):
         
         # post-process the seqs according to the verify_res.
         acc, rollout, revise_token, finish = verify_res.tolist()
+        accepted_lens = {}
+        invalidated_lens = {}
         for idx, seq in enumerate(seqs):
+            was_pre_verify = seq.pre_verify
+            accepted_len = 1 if was_pre_verify and acc[idx] else 0
+            if not was_pre_verify:
+                accepted_len = self.gamma if acc[idx] else self.gamma - rollout[idx]
+            invalidated_len = 0 if acc[idx] else rollout[idx]
+            accepted_lens[seq.seq_id] = accepted_len
+            invalidated_lens[seq.seq_id] = invalidated_len
+            seq.record_accepted(accepted_len)
+            seq.record_invalidated_predraft(invalidated_len)
+
             if finish[idx]:
-                seq.status = SequenceStatus.FINISHED
+                seq.mark_finished()
                 self.scheduler.block_manager.deallocate(seq)
                 self.scheduler.running.remove(seq)
                 self.scheduler.finished.append(seq)
@@ -551,6 +630,7 @@ class DraftModelRunner(ModelRunnerBase):
                     if rollout[idx] > 1:
                         self.scheduler.rollback(seq, rollout[idx] - 1)
                     seq.append_token(revise_token[idx])
+        return accepted_lens, invalidated_lens
 
 
 class TargetModelRunner(ModelRunnerBase):
@@ -589,11 +669,16 @@ class TargetModelRunner(ModelRunnerBase):
 
     def pearl_step(self):
         seqs, is_prefill = self.scheduler.schedule()
+        trace_record = self._trace_schedule(seqs, is_prefill, "verify")
         assert not is_prefill, "wrong match. current stage is prefill."
         input_ids, positions, temp_seqs = self.prepare_pearl_decode(seqs)
         temperatures = self.prepare_sample(temp_seqs) if self.tp_params.local_rank == 0 else None
+        torch.cuda.synchronize()
+        self._mark_trace_start(trace_record)
         logits = self.run_model(input_ids, positions, is_prefill)
-        self.verify(logits, seqs, temperatures)
+        accepted_lens, invalidated_lens = self.verify(logits, seqs, temperatures)
+        torch.cuda.synchronize()
+        self._mark_trace_end(trace_record, accepted_lens=accepted_lens, invalidated_lens=invalidated_lens)
 
     @torch.inference_mode()
     def verify(self, logits: torch.Tensor, seqs: list[Sequence], temperatures: torch.Tensor):
@@ -663,6 +748,19 @@ class TargetModelRunner(ModelRunnerBase):
 
         # post-process the seqs according to the verify_res.
         acc, rollout, revise_token, finish = verify_res.tolist()
+        accepted_lens = {}
+        invalidated_lens = {}
+
+        for idx, seq in enumerate(seqs):
+            was_pre_verify = seq.pre_verify
+            accepted_len = 1 if was_pre_verify and acc[idx] else 0
+            if not was_pre_verify:
+                accepted_len = self.gamma if acc[idx] else self.gamma - rollout[idx]
+            invalidated_len = 0 if acc[idx] else rollout[idx]
+            accepted_lens[seq.seq_id] = accepted_len
+            invalidated_lens[seq.seq_id] = invalidated_len
+            seq.record_accepted(accepted_len)
+            seq.record_invalidated_predraft(invalidated_len)
 
         for idx, seq in enumerate(seqs):
             
@@ -683,7 +781,7 @@ class TargetModelRunner(ModelRunnerBase):
                     seq.pre_verify = True
                     if rollout[idx] > 1:
                         self.scheduler.rollback(seq, rollout[idx] - 1)
-                    seq.append_token(revise_token[idx])        
+                    seq.mark_finished()       
         
             if finish[idx]:
                 seq.status = SequenceStatus.FINISHED
@@ -692,3 +790,4 @@ class TargetModelRunner(ModelRunnerBase):
                 self.scheduler.running.remove(seq)
                 self.scheduler.finished.append(seq)
                 continue
+        return accepted_lens, invalidated_lens
