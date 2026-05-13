@@ -287,6 +287,63 @@ class PEARLEngine:
 
         return output_text, num_tokens, num_acc_tokens, time
 
+
+    def prepare_decode_ready(self):
+        """Run unmeasured in-memory prefill for decoder-only benchmarking.
+
+        This materializes prompt KV in the current runner processes and leaves
+        requests resident for a subsequent decode_ready_generate() call. It does
+        not persist KV cache to disk or across engine runs.
+        """
+        self.controller.write_draft_shm("prepare_decode_ready")
+        self.controller.write_target_shm("prepare_decode_ready")
+        self.control_event.wait()
+        self.control_event.clear()
+
+    def decode_ready_generate(self, execution_mode: str | None = None):
+        """Run a decode-only measured phase after prepare_decode_ready().
+
+        The returned elapsed time excludes the prefill done by
+        prepare_decode_ready(). Traces/request metadata include
+        decode_ready_mode=True and decode_start_ts/decode_ready_ts markers.
+        """
+        execution_mode = self.config.execution_mode if execution_mode is None else execution_mode
+        if execution_mode not in self.config.ALLOWED_EXECUTION_MODES:
+            raise ValueError(
+                f"Invalid execution_mode={execution_mode!r}. "
+                f"Expected one of {sorted(self.config.ALLOWED_EXECUTION_MODES)}."
+            )
+        method_name = {
+            "ar": "decode_ready_parallel_generate",
+            "parallel_pearl": "decode_ready_pearl_generate",
+            "serialized_pearl": "decode_ready_serialized_pearl_generate",
+        }[execution_mode]
+        self.controller.write_draft_shm(method_name)
+        self.controller.write_target_shm(method_name)
+        self.control_event.wait()
+        self.control_event.clear()
+
+        output, time, target_traces, target_request_metadata = self.controller.read_output()
+        try:
+            self.last_traces, self.last_request_metadata = self.controller.read_all_traces()
+        except Exception:
+            self.last_traces = target_traces
+            self.last_request_metadata = target_request_metadata
+        output = sorted(output, key=lambda x: x[0])
+        seq_id, token_ids, num_acc_tokens = zip(*output)
+        output_text = [self.tokenizer.decode(token_ids, skip_special_tokens=False) for token_ids in token_ids]
+        prefill_tokens = {
+            req["seq_id"]: req.get("num_decode_ready_prefill_tokens", 0)
+            for req in self.last_request_metadata
+        }
+        # Decode-ready mode excludes the unmeasured prefill token(s) from the
+        # returned token counts so downstream TPOT uses decode-stage tokens only.
+        num_tokens = [max(len(t) - prefill_tokens.get(seq, 0), 0) for seq, t in zip(seq_id, token_ids)]
+        if execution_mode == "ar":
+            num_acc_tokens = None
+
+        return output_text, num_tokens, num_acc_tokens, time
+
     def get_traces(self):
         return {
             "traces": self.last_traces,

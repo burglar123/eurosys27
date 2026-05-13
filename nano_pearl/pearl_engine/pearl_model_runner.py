@@ -109,6 +109,7 @@ class ModelRunnerBase:
         self.scheduler = Scheduler(self.global_config)
         self.trace_records = []
         self.active_execution_mode = self.global_config.execution_mode
+        self.active_decode_ready_mode = False
         if not self.global_config.enforce_eager:
             self.capture_cudagraph()
         torch.set_default_dtype(self.default_dtype)
@@ -324,6 +325,7 @@ class ModelRunnerBase:
         per_seq_zeros = {seq.seq_id: 0 for seq in seqs}
         record = {
             "execution_mode": self.active_execution_mode,
+            "decode_ready_mode": self.active_decode_ready_mode,
             "iteration_id": iteration_id,
             "batch_id": batch_id,
             "runner_role": runner_role,
@@ -384,6 +386,16 @@ class ModelRunnerBase:
     def _service_metadata(self):
         seqs = list(self.scheduler.waiting) + list(self.scheduler.running) + list(self.scheduler.finished)
         return [seq.service_metadata() for seq in seqs]
+
+    def _mark_decode_ready(self):
+        ts = time.time()
+        for seq in self.scheduler.running:
+            seq.mark_decode_ready(ts)
+
+    def _mark_decode_started(self):
+        ts = time.time()
+        for seq in self.scheduler.running:
+            seq.mark_decode_started(ts)
 
     def _write_generation_result(self, output, elapsed_time):
         data = pickle.dumps([output, elapsed_time, self.trace_records, self._service_metadata()])
@@ -492,7 +504,83 @@ class ModelRunnerBase:
     def clear_requests(self):
         self.scheduler.clear()
         self.trace_records.clear()
+        self.active_decode_ready_mode = False
         dist.barrier()
+
+    def prepare_decode_ready(self):
+        """Materialize prompt KV before a decoder-only benchmark measurement.
+
+        This in-memory helper intentionally does not persist KV caches. It runs
+        the existing prompt prefill once, marks requests as decode-ready, and
+        leaves scheduler/KV state resident for a later decode_ready_* command.
+        The evaluator should start timing only after this method returns.
+        """
+        self.active_decode_ready_mode = True
+        dist.barrier()
+        self.prefill()
+        self._mark_decode_ready()
+        dist.barrier()
+
+    def _finish_decode_ready_generation(self, output, elapsed_time):
+        if self.tp_params.local_rank == 0:
+            self._write_generation_result(output, elapsed_time)
+        self.clear_requests()
+
+    def decode_ready_parallel_generate(self):
+        """Decode-only AR generation after prepare_decode_ready()."""
+        self._set_execution_mode("ar")
+        self.active_decode_ready_mode = True
+        dist.barrier()
+        self._mark_decode_started()
+        torch.cuda.synchronize()
+        start_time = time.time()
+        while not self.scheduler.is_finished():
+            outputs, num_tokens = self.step()
+        torch.cuda.synchronize()
+        end_time = time.time()
+        dist.barrier()
+
+        seqs = self.scheduler.finished
+        output = [(seq.seq_id, seq.completion_token_ids, seq.num_acc_tokens) for seq in seqs]
+        self._finish_decode_ready_generation(output, end_time - start_time)
+
+    def decode_ready_pearl_generate(self):
+        """Decode-only parallel PEARL after prepare_decode_ready()."""
+        self._set_execution_mode("parallel_pearl")
+        self.active_decode_ready_mode = True
+        dist.barrier()
+        self._mark_decode_started()
+        torch.cuda.synchronize()
+        start_time = time.time()
+        if self.gamma == -1:
+            self.gamma = self.gamma_list[next(x for x in self.gamma_list if x >= len(self.scheduler.running))]
+        while not self.scheduler.is_finished():
+            self.pearl_step()
+        torch.cuda.synchronize()
+        end_time = time.time()
+
+        seqs = self.scheduler.finished
+        output = [(seq.seq_id, seq.completion_token_ids, seq.num_acc_tokens) for seq in seqs]
+        self._finish_decode_ready_generation(output, end_time - start_time)
+
+    def decode_ready_serialized_pearl_generate(self):
+        """Decode-only serialized-PEARL approximation after prepare_decode_ready()."""
+        self._set_execution_mode("serialized_pearl")
+        self.active_decode_ready_mode = True
+        dist.barrier()
+        self._mark_decode_started()
+        torch.cuda.synchronize()
+        start_time = time.time()
+        if self.gamma == -1:
+            self.gamma = self.gamma_list[next(x for x in self.gamma_list if x >= len(self.scheduler.running))]
+        while not self.scheduler.is_finished():
+            self.serialized_pearl_step()
+        torch.cuda.synchronize()
+        end_time = time.time()
+
+        seqs = self.scheduler.finished
+        output = [(seq.seq_id, seq.completion_token_ids, seq.num_acc_tokens) for seq in seqs]
+        self._finish_decode_ready_generation(output, end_time - start_time)
 
     def parallel_generate(self):
         self._set_execution_mode("ar")

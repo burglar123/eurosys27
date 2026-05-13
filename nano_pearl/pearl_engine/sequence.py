@@ -31,6 +31,10 @@ class Sequence:
         self.arrival_ts = time.time() if arrival_ts is None else arrival_ts
         self.first_token_ts = None
         self.finish_ts = None
+        self.decode_ready_ts = None
+        self.decode_start_ts = None
+        self.decode_ready_mode = False
+        self.num_decode_ready_prefill_tokens = 0
         self.slo_tpot_ms = slo_tpot_ms
         self.slo_class = slo_class
         self.per_request_gamma = per_request_gamma
@@ -128,18 +132,45 @@ class Sequence:
     def record_invalidated_predraft(self, invalidated_len: int):
         self.trace_stats["invalidated_predraft_tokens"] += int(invalidated_len)
 
+    def mark_decode_ready(self, ts: float | None = None):
+        """Mark this request as decode-ready after an unmeasured prefill phase."""
+        self.decode_ready_ts = time.time() if ts is None else ts
+        self.decode_ready_mode = True
+        self.num_decode_ready_prefill_tokens = self.num_completion_tokens
+
+    def mark_decode_started(self, ts: float | None = None):
+        if self.decode_start_ts is None:
+            self.decode_start_ts = time.time() if ts is None else ts
+
     def mark_finished(self):
         self.status = SequenceStatus.FINISHED
         if self.finish_ts is None:
             self.finish_ts = time.time()
 
     def service_metadata(self):
+        num_decode_output_tokens = max(
+            self.num_completion_tokens - self.num_decode_ready_prefill_tokens,
+            0,
+        )
+        decode_elapsed_ms = None
+        observed_tpot_ms = None
+        if self.decode_start_ts is not None and self.finish_ts is not None:
+            decode_elapsed_ms = (self.finish_ts - self.decode_start_ts) * 1000
+            if num_decode_output_tokens > 0:
+                observed_tpot_ms = decode_elapsed_ms / num_decode_output_tokens
         return {
             "seq_id": self.seq_id,
             "request_id": self.request_id,
             "arrival_ts": self.arrival_ts,
             "first_token_ts": self.first_token_ts,
             "finish_ts": self.finish_ts,
+            "decode_ready_ts": self.decode_ready_ts,
+            "decode_start_ts": self.decode_start_ts,
+            "decode_ready_mode": self.decode_ready_mode,
+            "num_decode_ready_prefill_tokens": self.num_decode_ready_prefill_tokens,
+            "num_decode_output_tokens": num_decode_output_tokens,
+            "decode_elapsed_ms": decode_elapsed_ms,
+            "observed_tpot_ms": observed_tpot_ms,
             "slo_tpot_ms": self.slo_tpot_ms,
             "slo_class": self.slo_class,
             "per_request_gamma": self.per_request_gamma,
@@ -150,16 +181,18 @@ class Sequence:
         return (self.num_tokens, self.num_prompt_tokens, self.num_cached_tokens, self.block_table,
                 self.temperature, self.ignore_eos, self.max_tokens, self.seq_id, self.pre_verify,
                 self.num_acc_tokens, self.cur_acc_tokens, self.request_id, self.arrival_ts,
-                self.first_token_ts, self.finish_ts, self.slo_tpot_ms, self.slo_class,
-                self.per_request_gamma, self.trace_stats,
+                self.first_token_ts, self.finish_ts, self.decode_ready_ts, self.decode_start_ts,
+                self.decode_ready_mode, self.num_decode_ready_prefill_tokens,
+                self.slo_tpot_ms, self.slo_class, self.per_request_gamma, self.trace_stats,
                 self.token_ids if self.num_completion_tokens == 0 else self.last_token)
 
     def __setstate__(self, state):
         (self.num_tokens, self.num_prompt_tokens, self.num_cached_tokens, self.block_table,
          self.temperature, self.ignore_eos, self.max_tokens, self.seq_id, self.pre_verify,
          self.num_acc_tokens, self.cur_acc_tokens, self.request_id, self.arrival_ts,
-         self.first_token_ts, self.finish_ts, self.slo_tpot_ms, self.slo_class,
-         self.per_request_gamma, self.trace_stats) = state[:-1]
+         self.first_token_ts, self.finish_ts, self.decode_ready_ts, self.decode_start_ts,
+         self.decode_ready_mode, self.num_decode_ready_prefill_tokens,
+         self.slo_tpot_ms, self.slo_class, self.per_request_gamma, self.trace_stats) = state[:-1]
         if self.num_completion_tokens == 0:
             self.token_ids = state[-1]
         else:
