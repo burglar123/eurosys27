@@ -34,7 +34,7 @@ import os
 import sys
 import time
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -130,9 +130,23 @@ def make_pearl_config(args: argparse.Namespace) -> PEARLConfig:
         "draft_tensor_parallel_size": args.draft_tp,
         "target_tensor_parallel_size": args.target_tp,
         "gpu_memory_utilization": args.gpu_memory_utilization,
+        "execution_mode": args.execution_mode,
     }
 
     # Try new named-path style with gamma.
+    try:
+        return PEARLConfig(
+            draft_model_path=args.draft_model,
+            target_model_path=args.target_model,
+            gamma=args.gamma,
+            **common_kwargs,
+        )
+    except TypeError:
+        pass
+
+    # Older PEARLConfig variants may not expose execution_mode yet.
+    common_kwargs.pop("execution_mode", None)
+
     try:
         return PEARLConfig(
             draft_model_path=args.draft_model,
@@ -275,43 +289,238 @@ def extract_trace_list(trace_payload: Any) -> List[Dict[str, Any]]:
         return [x for x in trace_payload if isinstance(x, dict)]
 
     if isinstance(trace_payload, dict):
-        for key in ("traces", "requests", "sequences", "request_traces"):
+        for key in ("requests", "request_traces", "sequences", "traces"):
             value = trace_payload.get(key)
             if isinstance(value, list):
                 return [x for x in value if isinstance(x, dict)]
 
     return []
+
+
+REQUEST_ID_KEYS = ["request_id", "external_request_id", "req_id", "id"]
+SEQ_ID_KEYS = ["seq_id", "sequence_id"]
+
+
+def row_request_or_seq_id(row: Dict[str, Any]) -> Any:
+    return first_present(row, REQUEST_ID_KEYS + SEQ_ID_KEYS)
+
+
+def is_request_level_trace_row(
+    row: Dict[str, Any],
+    workload_ids: set[str],
+    seq_ids: set[str],
+) -> bool:
+    req_id = first_present(row, REQUEST_ID_KEYS)
+    seq_id = first_present(row, SEQ_ID_KEYS)
+    has_known_id = (req_id is not None and str(req_id) in workload_ids) or (
+        seq_id is not None and str(seq_id) in seq_ids
+    )
+    if not has_known_id:
+        return False
+
+    # Low-level scheduler traces usually describe a batch/iteration rather than
+    # one request and carry vector fields such as request_ids/scheduled_seq_ids.
+    if any(isinstance(row.get(key), list) for key in ("request_ids", "scheduled_seq_ids")):
+        return False
+
+    request_level_markers = [
+        "finish_ts",
+        "finished_ts",
+        "decode_elapsed_ms",
+        "observed_tpot_ms",
+        "num_output_tokens",
+        "num_decode_output_tokens",
+    ]
+    return any(key in row for key in request_level_markers)
+
+
+def extract_high_level_trace_list(trace_payload: Any) -> List[Dict[str, Any]]:
+    """Prefer one-row-per-request payload sections when the engine provides them."""
+    if not isinstance(trace_payload, dict):
+        return []
+
+    for key in ("requests", "request_traces", "request_summaries", "sequences"):
+        value = trace_payload.get(key)
+        if isinstance(value, list):
+            rows = [x for x in value if isinstance(x, dict)]
+            if rows:
+                print(f"[INFO] Using request-level trace payload key: {key}")
+                return rows
+    return []
+
+
+def iter_low_level_trace_rows(trace_payload: Any) -> Iterable[Dict[str, Any]]:
+    if isinstance(trace_payload, list):
+        for row in trace_payload:
+            if isinstance(row, dict):
+                yield row
+        return
+
+    if isinstance(trace_payload, dict):
+        for key in ("traces", "events", "iterations", "batches"):
+            value = trace_payload.get(key)
+            if isinstance(value, list):
+                for row in value:
+                    if isinstance(row, dict):
+                        yield row
+
+
+def value_for_member(value: Any, idx: int, member: Any) -> Any:
+    if isinstance(value, dict):
+        if member in value:
+            return value[member]
+        member_str = str(member)
+        if member_str in value:
+            return value[member_str]
+        return None
+    if isinstance(value, list) and idx < len(value):
+        return value[idx]
+    if isinstance(value, tuple) and idx < len(value):
+        return value[idx]
+    return value
+
+
+def numeric_sum(values: List[Any]) -> Optional[float]:
+    nums = [to_float(v) for v in values]
+    nums = [v for v in nums if v is not None]
+    return sum(nums) if nums else None
+
+
+def flatten_trace_stats(row: Dict[str, Any]) -> None:
+    stats = row.get("trace_stats")
+    if not isinstance(stats, dict):
+        return
+    for src, dst in (
+        ("accepted_tokens", "accepted_tokens"),
+        ("invalidated_predraft_tokens", "invalidated_predraft_tokens"),
+    ):
+        if dst not in row and src in stats:
+            row[dst] = stats[src]
+
+
+def aggregate_low_level_traces(
+    trace_rows: List[Dict[str, Any]],
+    abs_workload: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Collapse scheduler/iteration event traces into one row per request.
+
+    This is intentionally conservative: it carries timing and token counters that
+    are explicit in low-level rows, then merge_traces_with_workload fills missing
+    workload/output fields. It avoids falling back to one global elapsed time for
+    every request solely because the trace payload is event-level.
+    """
+    workload_ids = {str(req["request_id"]) for req in abs_workload}
+    seq_to_request: Dict[str, str] = {}
+
+    groups: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for event in trace_rows:
+        req_ids = event.get("request_ids")
+        seq_ids = event.get("scheduled_seq_ids")
+
+        members: List[Tuple[str, Any]] = []
+        if isinstance(req_ids, list) and req_ids:
+            members = [("request_id", req_id) for req_id in req_ids]
+            if isinstance(seq_ids, list):
+                for seq_id, req_id in zip(seq_ids, req_ids):
+                    seq_to_request[str(seq_id)] = str(req_id)
+        elif isinstance(seq_ids, list) and seq_ids:
+            members = [("seq_id", seq_id) for seq_id in seq_ids]
+        else:
+            direct_id = row_request_or_seq_id(event)
+            if direct_id is not None:
+                key_name = "request_id" if str(direct_id) in workload_ids else "seq_id"
+                members = [(key_name, direct_id)]
+
+        for idx, (key_name, member_id) in enumerate(members):
+            group_key = str(member_id)
+            if key_name == "seq_id" and group_key in seq_to_request:
+                group_key = seq_to_request[group_key]
+            member_event = dict(event)
+            member_event[key_name] = member_id
+            groups[group_key].append({"event": member_event, "member": member_id, "member_idx": idx})
+
+    aggregated: List[Dict[str, Any]] = []
+    for group_key, entries in groups.items():
+        events = [entry["event"] for entry in entries]
+        row: Dict[str, Any] = {}
+        if group_key in workload_ids:
+            row["request_id"] = group_key
+        else:
+            row["seq_id"] = group_key
+
+        starts = [
+            to_float(first_present(e, ["decode_start_ts", "verify_start_ts", "draft_start_ts", "total_iteration_start_ts", "start_ts"]))
+            for e in events
+        ]
+        ends = [
+            to_float(first_present(e, ["finish_ts", "verify_end_ts", "draft_end_ts", "total_iteration_end_ts", "end_ts"]))
+            for e in events
+        ]
+        starts = [x for x in starts if x is not None]
+        ends = [x for x in ends if x is not None]
+        if starts:
+            row["decode_start_ts"] = min(starts)
+        if ends:
+            row["finish_ts"] = max(ends)
+        if starts and ends and max(ends) >= min(starts):
+            row["decode_elapsed_ms"] = (max(ends) - min(starts)) * 1000.0
+
+        for key in ("execution_mode", "decode_ready_mode"):
+            for e in events:
+                if key in e:
+                    row[key] = e[key]
+                    break
+
+        accepted: List[Any] = []
+        invalidated: List[Any] = []
+        for entry in entries:
+            e = entry["event"]
+            member = entry["member"]
+            idx = entry["member_idx"]
+            accepted.append(value_for_member(first_present(e, ["accepted_tokens_per_seq", "per_seq_accepted_len", "accepted_tokens"]), idx, member))
+            invalidated.append(value_for_member(first_present(e, ["per_seq_invalidated_predraft_len", "invalidated_predraft_tokens"]), idx, member))
+        accepted_sum = numeric_sum(accepted)
+        invalidated_sum = numeric_sum(invalidated)
+        if accepted_sum is not None:
+            row["accepted_tokens"] = int(accepted_sum)
+        if invalidated_sum is not None:
+            row["invalidated_predraft_tokens"] = int(invalidated_sum)
+
+        row["num_low_level_events"] = len(events)
+        aggregated.append(row)
+
+    if aggregated:
+        print(
+            f"[INFO] Aggregated {len(trace_rows)} low-level trace rows "
+            f"into {len(aggregated)} request/sequence rows."
+        )
+    return aggregated
+
+
 def select_request_level_traces(
     trace_rows: List[Dict[str, Any]],
     abs_workload: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
     """
-    engine.get_traces() may return low-level event traces instead of one row per request.
-    We only keep request-level traces.
+    engine.get_traces() may return request summaries or low-level event traces.
+    Return one request-level row per request whenever possible.
 
     Rules:
-    1. If rows contain request_id matching workload request_id, keep those rows.
-    2. If trace row count equals workload size, trust positional alignment.
-    3. Otherwise discard engine traces and let merge_traces_with_workload synthesize
-       request-level traces from workload + engine outputs.
+    1. If rows look like request-level summaries with matching ids, keep them.
+    2. If non-vector row count equals workload size, trust positional alignment.
+    3. Otherwise aggregate low-level event rows by request_id/seq_id.
+    4. If nothing can be mapped, let merge_traces_with_workload synthesize rows.
     """
     if not trace_rows:
         return []
 
     workload_ids = {str(req["request_id"]) for req in abs_workload}
+    seq_ids = {str(req["seq_id"]) for req in abs_workload if "seq_id" in req}
 
     matched = []
     for row in trace_rows:
-        req_id = first_present(
-            row,
-            [
-                "request_id",
-                "external_request_id",
-                "req_id",
-                "id",
-            ],
-        )
-        if req_id is not None and str(req_id) in workload_ids:
+        flatten_trace_stats(row)
+        if is_request_level_trace_row(row, workload_ids, seq_ids):
             matched.append(row)
 
     if matched:
@@ -322,15 +531,40 @@ def select_request_level_traces(
             )
         return matched
 
-    if len(trace_rows) == len(abs_workload):
+    has_vector_low_level_rows = any(
+        isinstance(row.get(key), list)
+        for row in trace_rows
+        for key in ("request_ids", "scheduled_seq_ids")
+    )
+    if len(trace_rows) == len(abs_workload) and not has_vector_low_level_rows:
         return trace_rows
 
+    aggregated = aggregate_low_level_traces(trace_rows, abs_workload)
+    if aggregated:
+        filtered = [
+            row
+            for row in aggregated
+            if row.get("request_id") is None or str(row.get("request_id")) in workload_ids
+        ]
+        if filtered:
+            return filtered
+        return aggregated
+
     print(
-        f"[WARN] Discard engine traces: got {len(trace_rows)} trace rows "
-        f"for {len(abs_workload)} workload requests. "
-        f"These are likely low-level event traces, not request-level traces."
+        f"[WARN] Could not map {len(trace_rows)} engine trace rows "
+        f"to {len(abs_workload)} workload requests; synthesizing request rows."
     )
     return []
+
+
+def request_level_traces_from_payload(
+    trace_payload: Any,
+    abs_workload: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    high_level = extract_high_level_trace_list(trace_payload)
+    if high_level:
+        return select_request_level_traces(high_level, abs_workload)
+    return select_request_level_traces(list(iter_low_level_trace_rows(trace_payload)), abs_workload)
 
 
 def first_present(row: Dict[str, Any], keys: List[str]) -> Any:
@@ -365,6 +599,7 @@ def infer_num_output_tokens(
     value = first_present(
         row,
         [
+            "num_decode_output_tokens",
             "num_output_tokens",
             "num_completion_tokens",
             "completion_tokens",
@@ -539,6 +774,7 @@ def merge_traces_with_workload(
 
     if trace_rows:
         for idx, trace in enumerate(trace_rows):
+            flatten_trace_stats(trace)
             req_id = first_present(
                 trace,
                 [
@@ -566,6 +802,9 @@ def merge_traces_with_workload(
 
             if "num_output_tokens" not in base and idx < len(output_num_tokens):
                 base["num_output_tokens"] = output_num_tokens[idx]
+
+            if "num_output_tokens" not in base and "num_decode_output_tokens" in base:
+                base["num_output_tokens"] = base["num_decode_output_tokens"]
 
             if "num_acc_tokens" not in base:
                 try:
@@ -780,6 +1019,149 @@ def maybe_dump_engine_trace(engine: PEARLEngine, path: Optional[str]) -> None:
         print(f"[WARN] engine.dump_traces_json({path}) failed: {exc}")
 
 
+def run_generation(
+    engine: PEARLEngine,
+    execution_mode: str,
+    decode_ready: bool,
+) -> Tuple[List[str], List[int], Any, float]:
+    if decode_ready:
+        if not hasattr(engine, "prepare_decode_ready") or not hasattr(engine, "decode_ready_generate"):
+            raise RuntimeError(
+                "--decode-ready requires engine.prepare_decode_ready() and "
+                "engine.decode_ready_generate(...)."
+            )
+        print("[INFO] Preparing decode-ready requests (prefill is not timed)...")
+        engine.prepare_decode_ready()
+        print(f"[INFO] Starting decode-ready generation: execution_mode={execution_mode}")
+        return engine.decode_ready_generate(execution_mode)
+
+    print(f"[INFO] Starting generation: execution_mode={execution_mode}")
+    if execution_mode == "parallel_pearl":
+        return engine.generate()
+    if execution_mode == "serialized_pearl":
+        print(
+            "[INFO] Running serialized_pearl approximation baseline; this is not "
+            "strict vanilla serial speculative decoding."
+        )
+        return engine.serialized_pearl_generate()
+    if execution_mode == "ar":
+        output_text, num_tokens, _, elapsed_time = engine.AR_generate()
+        return output_text, num_tokens, None, elapsed_time
+    raise ValueError(f"Unknown execution_mode={execution_mode!r}")
+
+
+def add_workload_chunk(
+    engine: PEARLEngine,
+    chunk: List[Dict[str, Any]],
+    args: argparse.Namespace,
+) -> None:
+    for idx, req in enumerate(chunk):
+        if args.replay_arrivals:
+            offset = to_float(req.get("arrival_offset_sec"), 0.0) or 0.0
+            first_offset = getattr(args, "_first_arrival_offset", 0.0)
+            replay_wall_start = getattr(args, "_replay_wall_start", time.time())
+            target_delay = max(offset - first_offset, 0.0)
+            now_delay = time.time() - replay_wall_start
+            sleep_s = target_delay - now_delay
+            if sleep_s > 0:
+                time.sleep(sleep_s)
+
+        sampling_params = make_sampling_params(req, args)
+        prompt = get_request_prompt(req)
+
+        add_request_with_metadata(
+            engine=engine,
+            prompt=prompt,
+            sampling_params=sampling_params,
+            req=req,
+            arrival_ts=float(req["arrival_ts"]),
+            fallback_without_metadata=not args.fail_if_add_request_metadata_unsupported,
+        )
+
+        if (idx + 1) % 100 == 0:
+            print(f"[INFO] Added {idx + 1}/{len(chunk)} requests in current chunk")
+
+
+def run_eval_chunk(
+    engine: PEARLEngine,
+    chunk: List[Dict[str, Any]],
+    args: argparse.Namespace,
+) -> Tuple[List[str], List[int], Any, float, List[Dict[str, Any]]]:
+    print(f"[INFO] Adding {len(chunk)} request(s) to engine...")
+    add_workload_chunk(engine, chunk, args)
+
+    run_start_ts = time.time()
+    output_text, num_tokens, num_acc_tokens, elapsed_time = run_generation(
+        engine=engine,
+        execution_mode=args.execution_mode,
+        decode_ready=args.decode_ready,
+    )
+    run_end_ts = time.time()
+    print(f"[OK] Chunk generation finished. engine_elapsed_s={elapsed_time:.6f}")
+
+    trace_payload = try_get_traces(engine)
+    trace_rows = request_level_traces_from_payload(trace_payload, chunk)
+
+    merged_rows = merge_traces_with_workload(
+        trace_rows=trace_rows,
+        abs_workload=chunk,
+        output_num_tokens=num_tokens,
+        output_num_acc_tokens=num_acc_tokens,
+        run_start_ts=run_start_ts,
+        run_end_ts=run_end_ts,
+        engine_elapsed_s=elapsed_time,
+    )
+    for row in merged_rows:
+        row.setdefault("execution_mode", args.execution_mode)
+        row.setdefault("decode_ready_mode", bool(args.decode_ready))
+
+    return output_text, num_tokens, num_acc_tokens, elapsed_time, merged_rows
+
+
+def extend_num_acc_tokens(dst: List[Any], src: Any) -> None:
+    if src is None:
+        return
+    try:
+        dst.extend(list(src))
+    except TypeError:
+        dst.append(src)
+
+
+def trace_export_record(row: Dict[str, Any], execution_mode: str, decode_ready: bool) -> Dict[str, Any]:
+    flatten_trace_stats(row)
+    return {
+        "request_id": row.get("request_id"),
+        "category": row.get("category"),
+        "slo_class": row.get("slo_class"),
+        "slo_tpot_ms": row.get("slo_tpot_ms"),
+        "execution_mode": row.get("execution_mode", execution_mode),
+        "decode_ready_mode": row.get("decode_ready_mode", decode_ready),
+        "num_output_tokens": row.get("num_output_tokens"),
+        "num_decode_output_tokens": row.get("num_decode_output_tokens"),
+        "num_acc_tokens": row.get("num_acc_tokens"),
+        "decode_elapsed_ms": row.get("decode_elapsed_ms"),
+        "observed_tpot_ms": row.get("observed_tpot_ms"),
+        "finish_ts": first_present(row, ["finish_ts", "finished_ts", "end_ts", "end_time"]),
+        "decode_start_ts": first_present(row, ["decode_start_ts", "decoding_start_ts", "first_decode_ts", "first_token_ts", "start_decode_ts"]),
+        "accepted_tokens": row.get("accepted_tokens"),
+        "invalidated_predraft_tokens": row.get("invalidated_predraft_tokens"),
+    }
+
+
+def write_trace_export(path: Optional[str], rows: List[Dict[str, Any]], args: argparse.Namespace) -> None:
+    if not path:
+        return
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    records = [trace_export_record(row, args.execution_mode, args.decode_ready) for row in rows]
+    with open(path, "w", encoding="utf-8") as f:
+        if path.endswith(".jsonl"):
+            for record in records:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        else:
+            json.dump(records, f, indent=2, ensure_ascii=False)
+    print(f"[OK] Saved request-level trace export: {path}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Evaluate saved multi-SLO workload on nano-PEARL."
@@ -794,6 +1176,34 @@ def main() -> None:
     parser.add_argument("--target-tp", type=int, default=2)
     parser.add_argument("--gpu-memory-utilization", type=float, default=0.9)
     parser.add_argument("--gamma", type=int, default=4)
+    parser.add_argument(
+        "--execution-mode",
+        choices=["ar", "serialized_pearl", "parallel_pearl"],
+        default="parallel_pearl",
+        help=(
+            "Unified execution mode: ar, serialized_pearl approximation, or "
+            "current parallel_pearl (default: parallel_pearl)."
+        ),
+    )
+    parser.add_argument(
+        "--decode-ready",
+        "--prefill-elided",
+        dest="decode_ready",
+        action="store_true",
+        help=(
+            "Run an unmeasured prepare_decode_ready() phase first, then time only "
+            "decode_ready_generate(...). Reported TPOT is decode-stage TPOT."
+        ),
+    )
+    parser.add_argument(
+        "--eval-batch-size",
+        type=int,
+        default=None,
+        help=(
+            "If set, evaluate requests in chunks of this size. The default keeps "
+            "the old add-all-then-generate behavior."
+        ),
+    )
 
     # Generation defaults.
     parser.add_argument("--temperature", type=float, default=0.0)
@@ -845,6 +1255,15 @@ def main() -> None:
         help="Optional raw engine trace JSON path via engine.dump_traces_json().",
     )
     parser.add_argument(
+        "--trace-out",
+        type=str,
+        default=None,
+        help=(
+            "Optional request-level JSON/JSONL trace export suitable for plotting. "
+            "Use a .jsonl suffix for JSONL output."
+        ),
+    )
+    parser.add_argument(
         "--save-output-text",
         action="store_true",
         help="Save generated output text into result JSON. This can make files large.",
@@ -870,7 +1289,6 @@ def main() -> None:
     num_tokens: List[int] = []
     num_acc_tokens: Any = []
     elapsed_time = 0.0
-    trace_payload: Any = None
     evaluated_rows: List[Dict[str, Any]] = []
     metrics: Dict[str, Any] = {}
 
@@ -884,56 +1302,48 @@ def main() -> None:
             use_absolute_arrival_ts=args.use_workload_absolute_arrival_ts,
         )
 
-        print("[INFO] Adding requests to engine...")
+        if args.eval_batch_size is not None and args.eval_batch_size <= 0:
+            raise ValueError("--eval-batch-size must be positive when set")
 
-        first_arrival_offset = to_float(abs_workload[0].get("arrival_offset_sec"), 0.0) or 0.0
-        replay_wall_start = time.time()
+        setattr(args, "_first_arrival_offset", to_float(abs_workload[0].get("arrival_offset_sec"), 0.0) or 0.0)
+        setattr(args, "_replay_wall_start", time.time())
 
-        for idx, req in enumerate(abs_workload):
-            if args.replay_arrivals:
-                offset = to_float(req.get("arrival_offset_sec"), 0.0) or 0.0
-                target_delay = max(offset - first_arrival_offset, 0.0)
-                now_delay = time.time() - replay_wall_start
-                sleep_s = target_delay - now_delay
-                if sleep_s > 0:
-                    time.sleep(sleep_s)
-
-            sampling_params = make_sampling_params(req, args)
-            prompt = get_request_prompt(req)
-
-            add_request_with_metadata(
-                engine=engine,
-                prompt=prompt,
-                sampling_params=sampling_params,
-                req=req,
-                arrival_ts=float(req["arrival_ts"]),
-                fallback_without_metadata=not args.fail_if_add_request_metadata_unsupported,
+        chunks: List[List[Dict[str, Any]]]
+        if args.eval_batch_size is None:
+            chunks = [abs_workload]
+        else:
+            chunks = [
+                abs_workload[i : i + args.eval_batch_size]
+                for i in range(0, len(abs_workload), args.eval_batch_size)
+            ]
+            print(
+                f"[INFO] Chunked evaluation enabled: "
+                f"eval_batch_size={args.eval_batch_size}, chunks={len(chunks)}"
             )
 
-            if (idx + 1) % 100 == 0:
-                print(f"[INFO] Added {idx + 1}/{len(abs_workload)} requests")
+        all_merged_rows: List[Dict[str, Any]] = []
+        raw_num_acc_tokens: List[Any] = []
 
-        print("[INFO] Starting generation...")
-        run_start_ts = time.time()
-        output_text, num_tokens, num_acc_tokens, elapsed_time = engine.generate()
-        run_end_ts = time.time()
-        print(f"[OK] Generation finished. engine_elapsed_s={elapsed_time:.6f}")
+        for chunk_idx, chunk in enumerate(chunks, start=1):
+            print(f"[INFO] Evaluating chunk {chunk_idx}/{len(chunks)}")
+            (
+                chunk_output_text,
+                chunk_num_tokens,
+                chunk_num_acc_tokens,
+                chunk_elapsed_time,
+                chunk_rows,
+            ) = run_eval_chunk(engine, chunk, args)
 
-        trace_payload = try_get_traces(engine)
-        trace_rows = extract_trace_list(trace_payload)
-        trace_rows = select_request_level_traces(trace_rows, abs_workload)
+            output_text.extend(chunk_output_text)
+            num_tokens.extend(chunk_num_tokens)
+            extend_num_acc_tokens(raw_num_acc_tokens, chunk_num_acc_tokens)
+            elapsed_time += chunk_elapsed_time
+            all_merged_rows.extend(chunk_rows)
+
+        num_acc_tokens = None if args.execution_mode == "ar" else raw_num_acc_tokens
+        merged_rows = all_merged_rows
 
         maybe_dump_engine_trace(engine, args.engine_trace_out)
-
-        merged_rows = merge_traces_with_workload(
-            trace_rows=trace_rows,
-            abs_workload=abs_workload,
-            output_num_tokens=num_tokens,
-            output_num_acc_tokens=num_acc_tokens,
-            run_start_ts=run_start_ts,
-            run_end_ts=run_end_ts,
-            engine_elapsed_s=elapsed_time,
-        )
 
         metrics, evaluated_rows = compute_metrics(
             rows=merged_rows,
@@ -941,9 +1351,16 @@ def main() -> None:
             denominator_mode=args.goodput_denominator,
             workload_meta=workload_meta,
         )
+        metrics["execution_mode"] = args.execution_mode
+        metrics["decode_ready_mode"] = bool(args.decode_ready)
+        metrics["eval_batch_size"] = args.eval_batch_size
+
+        write_trace_export(args.trace_out, evaluated_rows, args)
+
+        result_args = {key: value for key, value in vars(args).items() if not key.startswith("_")}
 
         result: Dict[str, Any] = {
-            "args": vars(args),
+            "args": result_args,
             "workload_meta": workload_meta,
             "metrics": metrics,
             "num_tokens": num_tokens,
