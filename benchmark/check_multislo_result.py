@@ -100,6 +100,107 @@ def fmt(value: Any) -> str:
     return str(value)
 
 
+def values_from_mapping(value: Any) -> List[Any]:
+    if isinstance(value, dict):
+        return list(value.values())
+    if isinstance(value, list):
+        return list(value)
+    if value is None:
+        return []
+    return [value]
+
+
+def summarize_plan_rows(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    raw_plan_rows = 0
+    plan_roles = set()
+    effective_gamma_values = set()
+    legacy_false = 0
+    eager_true = 0
+    non_null_home_batch_id = 0
+    plan_ids: List[int] = []
+    plan_id_role_counts: Dict[tuple[Any, Any], int] = {}
+
+    for row in rows:
+        signature = row.get("plan_signature")
+        if not isinstance(signature, dict):
+            signature = {}
+        has_plan = any(
+            key in row
+            for key in (
+                "plan_signature",
+                "plan_id",
+                "plan_digest",
+                "plan_runner_role",
+                "effective_gamma_per_seq",
+            )
+        )
+        if not has_plan:
+            continue
+
+        raw_plan_rows += 1
+        role = row.get("plan_runner_role") or signature.get("runner_role")
+        if role is not None:
+            plan_roles.add(role)
+
+        plan_id = row.get("plan_id", signature.get("plan_id"))
+        try:
+            plan_id_int = int(plan_id)
+        except Exception:
+            plan_id_int = None
+        if plan_id_int is not None:
+            plan_ids.append(plan_id_int)
+            key = (role, plan_id_int)
+            plan_id_role_counts[key] = plan_id_role_counts.get(key, 0) + 1
+
+        legacy_equivalent = row.get(
+            "plan_legacy_equivalent", signature.get("legacy_equivalent")
+        )
+        if legacy_equivalent is False:
+            legacy_false += 1
+
+        gamma_values = values_from_mapping(row.get("effective_gamma_per_seq"))
+        gamma_values += values_from_mapping(signature.get("effective_gamma_per_seq"))
+        if row.get("effective_gamma") is not None:
+            gamma_values.append(row.get("effective_gamma"))
+        for value in gamma_values:
+            try:
+                effective_gamma_values.add(int(value))
+            except Exception:
+                pass
+
+        eager_values = values_from_mapping(row.get("is_eager_per_seq"))
+        eager_values += values_from_mapping(signature.get("is_eager_per_seq"))
+        if row.get("is_eager") is not None:
+            eager_values.append(row.get("is_eager"))
+        if any(value is True for value in eager_values):
+            eager_true += 1
+
+        home_values = values_from_mapping(row.get("home_batch_id_per_seq"))
+        home_values += values_from_mapping(signature.get("home_batch_id_per_seq"))
+        if row.get("home_batch_id") is not None:
+            home_values.append(row.get("home_batch_id"))
+        if any(value is not None for value in home_values):
+            non_null_home_batch_id += 1
+
+    duplicate_plan_ids_by_role = {
+        f"{role}:{plan_id}": count
+        for (role, plan_id), count in plan_id_role_counts.items()
+        if count > 1
+    }
+
+    return {
+        "raw_plan_traces": raw_plan_rows,
+        "unique_plan_roles": sorted(plan_roles, key=str),
+        "unique_effective_gamma_values": sorted(effective_gamma_values),
+        "plan_legacy_equivalent_false": legacy_false,
+        "plan_is_eager_true": eager_true,
+        "plan_home_batch_id_non_null": non_null_home_batch_id,
+        "plan_id_min": min(plan_ids) if plan_ids else None,
+        "plan_id_max": max(plan_ids) if plan_ids else None,
+        "duplicate_plan_id_by_role": duplicate_plan_ids_by_role,
+    }
+
+
 def summarize(path: Path) -> int:
     payload, rows = load_file(path)
     args = payload.get("args", {}) if isinstance(payload, dict) else {}
@@ -185,6 +286,31 @@ def summarize(path: Path) -> int:
     print(f"rows with is_eager=true: {eager_true}")
     print(f"rows with non-null home_batch_id: {non_null_home_batch_id}")
     print(f"rows with plan_ids: {rows_with_plan_ids}")
+
+    plan_summary = summarize_plan_rows(rows)
+    print(f"raw plan traces: {plan_summary['raw_plan_traces']}")
+    print(f"unique plan roles: {plan_summary['unique_plan_roles']}")
+    print(
+        "raw unique effective_gamma values: "
+        f"{plan_summary['unique_effective_gamma_values']}"
+    )
+    print(
+        "raw plan_legacy_equivalent=false rows: "
+        f"{plan_summary['plan_legacy_equivalent_false']}"
+    )
+    print(f"raw plan rows with is_eager=true: {plan_summary['plan_is_eager_true']}")
+    print(
+        "raw plan rows with non-null home_batch_id: "
+        f"{plan_summary['plan_home_batch_id_non_null']}"
+    )
+    print(
+        "raw plan_id range: "
+        f"{fmt(plan_summary['plan_id_min'])} / {fmt(plan_summary['plan_id_max'])}"
+    )
+    print(
+        "duplicate plan_id by role: "
+        f"{plan_summary['duplicate_plan_id_by_role']}"
+    )
 
     anomalous = arrival_after_finish + elapsed_mismatch + tpot_mismatch
     if long_fast:

@@ -25,7 +25,8 @@ sys.modules.setdefault("nano_pearl.pearl_engine", engine_pkg)
 
 Scheduler = importlib.import_module("nano_pearl.pearl_engine.scheduler").Scheduler
 Sequence = importlib.import_module("nano_pearl.pearl_engine.sequence").Sequence
-PlanRole = importlib.import_module("nano_pearl.pearl_engine.stspec_plan").PlanRole
+stspec_plan = importlib.import_module("nano_pearl.pearl_engine.stspec_plan")
+PlanRole = stspec_plan.PlanRole
 
 
 def make_scheduler() -> Scheduler:
@@ -79,6 +80,15 @@ def assert_legacy_plan_fields(step_plan, seqs, *, is_prefill: bool, expected_bud
     assert step_plan.is_eager_per_seq == {seq.seq_id: False for seq in seqs}
     assert step_plan.home_batch_id_per_seq == {seq.seq_id: None for seq in seqs}
     assert step_plan.effective_gamma_per_seq == {seq.seq_id: 4 for seq in seqs}
+    signature = step_plan.signature()
+    assert signature["plan_id"] == step_plan.plan_id
+    assert signature["legacy_equivalent"] is True
+    assert signature["scheduled_seq_ids"] == seq_ids
+    assert signature["request_ids"] == [seq.request_id for seq in seqs]
+    assert signature["effective_gamma_per_seq"] == {str(seq.seq_id): 4 for seq in seqs}
+    assert signature["home_batch_id_per_seq"] == {str(seq.seq_id): None for seq in seqs}
+    assert signature["is_eager_per_seq"] == {str(seq.seq_id): False for seq in seqs}
+    assert stspec_plan.step_plan_digest(step_plan) == step_plan.digest()
 
 
 def main() -> None:

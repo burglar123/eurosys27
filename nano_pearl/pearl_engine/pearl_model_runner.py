@@ -343,6 +343,8 @@ class ModelRunnerBase:
         for seq in seqs:
             seq.mark_scheduled(iteration_id, batch_id, is_prefill, runner_role)
         per_seq_zeros = {seq.seq_id: 0 for seq in seqs}
+        plan_signature = step_plan.signature()
+        plan_digest = step_plan.digest()
         record = {
             "execution_mode": self.active_execution_mode,
             "decode_ready_mode": self.active_decode_ready_mode,
@@ -352,6 +354,11 @@ class ModelRunnerBase:
             "scheduled_seq_ids": [seq.seq_id for seq in seqs],
             "request_ids": [seq.request_id for seq in seqs],
             "plan_id": step_plan.plan_id,
+            "plan_signature": plan_signature,
+            "plan_signature_hash": plan_digest,
+            "plan_digest": plan_digest,
+            "plan_num_requests": len(step_plan.requests),
+            "plan_request_ids": list(step_plan.request_ids),
             "plan_legacy_equivalent": step_plan.legacy_equivalent,
             "plan_runner_role": step_plan.runner_role,
             "plan_scheduled_seq_ids": list(step_plan.scheduled_seq_ids),

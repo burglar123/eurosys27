@@ -8,6 +8,8 @@ stable interface without changing today's runtime behavior.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -63,6 +65,58 @@ class StepPlan:
     @property
     def is_eager_per_seq(self) -> dict[int, bool]:
         return {request.seq_id: request.is_eager for request in self.requests}
+
+    @property
+    def request_ids(self) -> list[Any]:
+        return [request.request_id for request in self.requests]
+
+    def signature(self) -> dict[str, Any]:
+        """Return a compact JSON-serializable plan signature.
+
+        The signature is diagnostic-only: it summarizes the legacy-equivalent
+        decision already made by Scheduler.schedule() and does not participate
+        in scheduling, verification, or KV-cache behavior. Per-sequence maps use
+        string keys so the signature is stable under JSON serialization.
+        """
+        return {
+            "plan_id": self.plan_id,
+            "execution_mode": self.execution_mode,
+            "decode_ready_mode": self.decode_ready_mode,
+            "runner_role": self.runner_role,
+            "is_prefill": self.is_prefill,
+            "legacy_equivalent": self.legacy_equivalent,
+            "scheduled_seq_ids": list(self.scheduled_seq_ids),
+            "request_ids": list(self.request_ids),
+            "effective_gamma_per_seq": {
+                str(seq_id): gamma
+                for seq_id, gamma in self.effective_gamma_per_seq.items()
+            },
+            "home_batch_id_per_seq": {
+                str(seq_id): home_batch_id
+                for seq_id, home_batch_id in self.home_batch_id_per_seq.items()
+            },
+            "is_eager_per_seq": {
+                str(seq_id): is_eager
+                for seq_id, is_eager in self.is_eager_per_seq.items()
+            },
+        }
+
+    def digest(self) -> str:
+        return step_plan_digest(self)
+
+
+def step_plan_signature(step_plan: StepPlan) -> dict[str, Any]:
+    return step_plan.signature()
+
+
+def step_plan_digest(step_plan: StepPlan) -> str:
+    encoded = json.dumps(
+        step_plan_signature(step_plan),
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()[:16]
 
 
 def role_from_runner(runner_role: str, is_prefill: bool) -> PlanRole:
