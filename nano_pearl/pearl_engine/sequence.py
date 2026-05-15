@@ -142,9 +142,9 @@ class Sequence:
         if self.decode_start_ts is None:
             self.decode_start_ts = time.time() if ts is None else ts
 
-    def mark_finished(self):
+    def mark_finished(self, record_finish_ts: bool = True):
         self.status = SequenceStatus.FINISHED
-        if self.finish_ts is None:
+        if record_finish_ts and self.finish_ts is None:
             self.finish_ts = time.time()
 
     def service_metadata(self):
