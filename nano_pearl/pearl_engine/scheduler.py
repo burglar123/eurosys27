@@ -3,7 +3,8 @@ from collections import deque
 from nano_pearl.pearl_config import PEARLConfig
 from nano_pearl.pearl_engine.sequence import Sequence, SequenceStatus
 from nano_pearl.pearl_engine.block_manager import BlockManager
-from nano_pearl.pearl_engine.pearl_model_runner import logger
+from nano_pearl.utils.pearl_logger import logger
+from nano_pearl.pearl_engine.stspec_plan import StepPlan, build_legacy_step_plan
 
 
 def is_eos(token_id: int, eos_token_id: int | list[int]):
@@ -71,6 +72,32 @@ class Scheduler:
         assert scheduled_seqs
         self.running.extendleft(reversed(scheduled_seqs))
         return scheduled_seqs, False
+
+    def schedule_with_plan(
+        self,
+        runner_role: str,
+        execution_mode: str,
+        decode_ready_mode: bool,
+        default_gamma: int,
+    ) -> tuple[list[Sequence], bool, StepPlan]:
+        """Return the legacy schedule plus a scaffold StepPlan.
+
+        This wrapper deliberately delegates to schedule() and does not alter the
+        scheduler decision. The plan_id mirrors the next trace iteration id that
+        _trace_schedule() will consume, preserving current iteration accounting.
+        """
+        plan_id = self.iteration_id
+        seqs, is_prefill = self.schedule()
+        step_plan = build_legacy_step_plan(
+            plan_id=plan_id,
+            seqs=seqs,
+            is_prefill=is_prefill,
+            runner_role=runner_role,
+            execution_mode=execution_mode,
+            decode_ready_mode=decode_ready_mode,
+            default_gamma=default_gamma,
+        )
+        return seqs, is_prefill, step_plan
 
     def preempt(self, seq: Sequence):
         seq.status = SequenceStatus.WAITING
