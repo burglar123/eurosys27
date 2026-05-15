@@ -29,6 +29,12 @@ class Scheduler:
         # scheduling order or execution behavior; actual two-batch scheduling is
         # deferred to a later PR.
         self.next_home_batch_id = 0
+        # ST-Spec V3B shadow-only two-batch rhythm. Decode plans alternate
+        # conceptual target/draft home batches for diagnostics; schedule()
+        # still returns the full legacy batch and no execution is filtered.
+        self.two_batch_shadow_step = 0
+        self.current_target_home_batch_id = 0
+        self.current_draft_home_batch_id = 1
 
     def next_batch_id(self, runner_role: str) -> tuple[int, str]:
         iteration_id = self.iteration_id
@@ -96,6 +102,14 @@ class Scheduler:
         """
         plan_id = self.iteration_id
         seqs, is_prefill = self.schedule()
+        target_home_batch_id = None
+        draft_home_batch_id = None
+        if not is_prefill:
+            target_home_batch_id = self.two_batch_shadow_step % 2
+            draft_home_batch_id = 1 - target_home_batch_id
+            self.current_target_home_batch_id = target_home_batch_id
+            self.current_draft_home_batch_id = draft_home_batch_id
+            self.two_batch_shadow_step += 1
         step_plan = build_legacy_step_plan(
             plan_id=plan_id,
             seqs=seqs,
@@ -104,6 +118,8 @@ class Scheduler:
             execution_mode=execution_mode,
             decode_ready_mode=decode_ready_mode,
             default_gamma=default_gamma,
+            target_home_batch_id=target_home_batch_id,
+            draft_home_batch_id=draft_home_batch_id,
         )
         return seqs, is_prefill, step_plan
 
@@ -136,6 +152,9 @@ class Scheduler:
             self.block_manager.deallocate(seq)
         self.iteration_id = 0
         self.next_home_batch_id = 0
+        self.two_batch_shadow_step = 0
+        self.current_target_home_batch_id = 0
+        self.current_draft_home_batch_id = 1
         self.block_manager.hash_to_block_id.clear()
         for block in self.block_manager.blocks:
             block.hash = -1

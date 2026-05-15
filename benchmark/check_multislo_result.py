@@ -121,6 +121,10 @@ def summarize_plan_rows(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     null_home_batch_id = 0
     raw_home_batch_id_values = set()
     raw_home_batch_id_counts: Counter[Any] = Counter()
+    raw_target_home_batch_id_values = set()
+    raw_draft_home_batch_id_values = set()
+    raw_same_target_draft = 0
+    raw_invalid_target_draft = 0
     plan_ids: List[int] = []
     plan_id_role_counts: Dict[tuple[Any, Any], int] = {}
 
@@ -184,6 +188,23 @@ def summarize_plan_rows(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         home_values = row_home_values if row_home_values else signature_home_values
         if row.get("home_batch_id") is not None:
             home_values.append(row.get("home_batch_id"))
+
+        target_home_batch_id = row.get(
+            "target_home_batch_id", signature.get("target_home_batch_id")
+        )
+        draft_home_batch_id = row.get(
+            "draft_home_batch_id", signature.get("draft_home_batch_id")
+        )
+        if target_home_batch_id is not None:
+            raw_target_home_batch_id_values.add(target_home_batch_id)
+        if draft_home_batch_id is not None:
+            raw_draft_home_batch_id_values.add(draft_home_batch_id)
+        if target_home_batch_id is not None and draft_home_batch_id is not None:
+            if target_home_batch_id == draft_home_batch_id:
+                raw_same_target_draft += 1
+            if target_home_batch_id not in {0, 1} or draft_home_batch_id not in {0, 1}:
+                raw_invalid_target_draft += 1
+
         if any(value is not None for value in home_values):
             non_null_home_batch_id += 1
         if any(value is None for value in home_values) or not home_values:
@@ -211,6 +232,14 @@ def summarize_plan_rows(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         "raw_count_per_home_batch_id": dict(
             sorted(raw_home_batch_id_counts.items(), key=lambda kv: str(kv[0]))
         ),
+        "raw_unique_target_home_batch_id_values": sorted(
+            raw_target_home_batch_id_values, key=str
+        ),
+        "raw_unique_draft_home_batch_id_values": sorted(
+            raw_draft_home_batch_id_values, key=str
+        ),
+        "raw_same_target_draft_home_batch_id": raw_same_target_draft,
+        "raw_invalid_target_draft_home_batch_id": raw_invalid_target_draft,
         "plan_id_min": min(plan_ids) if plan_ids else None,
         "plan_id_max": max(plan_ids) if plan_ids else None,
         "duplicate_plan_id_by_role": duplicate_plan_ids_by_role,
@@ -246,6 +275,11 @@ def summarize(path: Path) -> int:
     home_batch_id_values = set()
     home_batch_id_counts: Counter[Any] = Counter()
     rows_with_plan_ids = 0
+    rows_with_two_batch_shadow = 0
+    target_home_batch_id_values = set()
+    draft_home_batch_id_values = set()
+    target_batch_hit_sum = 0
+    draft_home_batch_hit_sum = 0
 
     for row in rows:
         tokens = infer_tokens(row)
@@ -284,6 +318,14 @@ def summarize(path: Path) -> int:
         plan_ids = row.get("plan_ids")
         if isinstance(plan_ids, list) and plan_ids:
             rows_with_plan_ids += 1
+        if row.get("plan_two_batch_shadow") is True:
+            rows_with_two_batch_shadow += 1
+        for value in row.get("target_home_batch_ids") or []:
+            target_home_batch_id_values.add(value)
+        for value in row.get("draft_home_batch_ids") or []:
+            draft_home_batch_id_values.add(value)
+        target_batch_hit_sum += int(row.get("target_batch_hit_count") or 0)
+        draft_home_batch_hit_sum += int(row.get("draft_home_batch_hit_count") or 0)
 
     dec_min, dec_med, dec_max = quantiles(decode_elapsed_values)
     tpot_min, tpot_med, tpot_max = quantiles(observed_tpot_values)
@@ -308,6 +350,17 @@ def summarize(path: Path) -> int:
     print(f"unique home_batch_id values: {sorted(home_batch_id_values, key=str)}")
     print(f"count per home_batch_id: {dict(sorted(home_batch_id_counts.items(), key=lambda kv: str(kv[0])))}")
     print(f"rows with plan_ids: {rows_with_plan_ids}")
+    print(f"rows with plan_two_batch_shadow: {rows_with_two_batch_shadow}")
+    print(
+        "unique target_home_batch_id values: "
+        f"{sorted(target_home_batch_id_values, key=str)}"
+    )
+    print(
+        "unique draft_home_batch_id values: "
+        f"{sorted(draft_home_batch_id_values, key=str)}"
+    )
+    print(f"sum target_batch_hit_count: {target_batch_hit_sum}")
+    print(f"sum draft_home_batch_hit_count: {draft_home_batch_hit_sum}")
 
     plan_summary = summarize_plan_rows(rows)
     print(f"raw plan traces: {plan_summary['raw_plan_traces']}")
@@ -336,6 +389,22 @@ def summarize(path: Path) -> int:
     print(
         "raw count per home_batch_id: "
         f"{plan_summary['raw_count_per_home_batch_id']}"
+    )
+    print(
+        "raw unique target_home_batch_id values: "
+        f"{plan_summary['raw_unique_target_home_batch_id_values']}"
+    )
+    print(
+        "raw unique draft_home_batch_id values: "
+        f"{plan_summary['raw_unique_draft_home_batch_id_values']}"
+    )
+    print(
+        "raw plans with target_home_batch_id == draft_home_batch_id: "
+        f"{plan_summary['raw_same_target_draft_home_batch_id']}"
+    )
+    print(
+        "raw plans with target/draft ids outside {0,1}: "
+        f"{plan_summary['raw_invalid_target_draft_home_batch_id']}"
     )
     print(
         "raw plan_id range: "

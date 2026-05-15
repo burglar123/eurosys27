@@ -93,6 +93,35 @@ def assert_legacy_plan_fields(step_plan, seqs, *, is_prefill: bool, expected_bud
     assert signature["home_batch_id_per_seq"] == {str(seq_id): home_batch_id for seq_id, home_batch_id in expected_home_batch_ids.items()}
     assert signature["is_eager_per_seq"] == {str(seq.seq_id): False for seq in seqs}
     assert stspec_plan.step_plan_digest(step_plan) == step_plan.digest()
+    if is_prefill:
+        assert step_plan.plan_two_batch_shadow is False
+        assert step_plan.target_home_batch_id is None
+        assert step_plan.draft_home_batch_id is None
+        assert step_plan.target_batch_seq_ids == []
+        assert step_plan.draft_home_batch_seq_ids == []
+    else:
+        assert step_plan.plan_two_batch_shadow is True
+        assert step_plan.target_home_batch_id in {0, 1}
+        assert step_plan.draft_home_batch_id in {0, 1}
+        assert step_plan.target_home_batch_id != step_plan.draft_home_batch_id
+        assert step_plan.target_batch_seq_ids == [
+            seq.seq_id for seq in seqs if seq.home_batch_id == step_plan.target_home_batch_id
+        ]
+        assert step_plan.draft_home_batch_seq_ids == [
+            seq.seq_id for seq in seqs if seq.home_batch_id == step_plan.draft_home_batch_id
+        ]
+        flipped_plan = stspec_plan.build_legacy_step_plan(
+            plan_id=step_plan.plan_id,
+            seqs=seqs,
+            is_prefill=False,
+            runner_role=step_plan.runner_role,
+            execution_mode=step_plan.execution_mode,
+            decode_ready_mode=step_plan.decode_ready_mode,
+            default_gamma=4,
+            target_home_batch_id=step_plan.draft_home_batch_id,
+            draft_home_batch_id=step_plan.target_home_batch_id,
+        )
+        assert flipped_plan.digest() != step_plan.digest()
 
 
 def main() -> None:
@@ -130,6 +159,19 @@ def main() -> None:
     assert planned_decode_is_prefill == legacy_decode_is_prefill == False
     assert planned_decode == planned_seqs
     assert_legacy_plan_fields(decode_plan, planned_decode, is_prefill=False, expected_budget=4)
+    assert decode_plan.target_home_batch_id == 0
+    assert decode_plan.draft_home_batch_id == 1
+
+    second_decode, second_is_prefill, second_plan = planned_scheduler.schedule_with_plan(
+        runner_role="draft",
+        execution_mode="parallel_pearl",
+        decode_ready_mode=False,
+        default_gamma=4,
+    )
+    assert second_is_prefill is False
+    assert second_decode == planned_seqs
+    assert second_plan.target_home_batch_id == 1
+    assert second_plan.draft_home_batch_id == 0
 
     ar_scheduler = make_scheduler()
     add_dummy_requests(ar_scheduler)
@@ -144,6 +186,7 @@ def main() -> None:
     assert all(request.role == PlanRole.TARGET for request in ar_plan.requests)
     assert all(request.draft_budget == 1 for request in ar_plan.requests)
     assert ar_plan.target_seq_ids == [seq.seq_id for seq in ar_decode]
+    assert ar_plan.plan_two_batch_shadow is True
 
     print("ST-Spec StepPlan scaffold diagnostics passed")
 

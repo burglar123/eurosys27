@@ -52,6 +52,12 @@ class StepPlan:
     target_seq_ids: list[int] = field(default_factory=list)
     draft_home_seq_ids: list[int] = field(default_factory=list)
     eager_seq_ids: list[int] = field(default_factory=list)
+    target_home_batch_id: int | None = None
+    draft_home_batch_id: int | None = None
+    target_batch_seq_ids: list[int] = field(default_factory=list)
+    draft_home_batch_seq_ids: list[int] = field(default_factory=list)
+    off_batch_seq_ids: list[int] = field(default_factory=list)
+    plan_two_batch_shadow: bool = False
     requests: list[PlanRequest] = field(default_factory=list)
 
     @property
@@ -85,6 +91,12 @@ class StepPlan:
             "runner_role": self.runner_role,
             "is_prefill": self.is_prefill,
             "legacy_equivalent": self.legacy_equivalent,
+            "target_home_batch_id": self.target_home_batch_id,
+            "draft_home_batch_id": self.draft_home_batch_id,
+            "target_batch_seq_ids": list(self.target_batch_seq_ids),
+            "draft_home_batch_seq_ids": list(self.draft_home_batch_seq_ids),
+            "off_batch_seq_ids": list(self.off_batch_seq_ids),
+            "plan_two_batch_shadow": self.plan_two_batch_shadow,
             "scheduled_seq_ids": list(self.scheduled_seq_ids),
             "request_ids": list(self.request_ids),
             "effective_gamma_per_seq": {
@@ -136,13 +148,15 @@ def build_legacy_step_plan(
     execution_mode: str,
     decode_ready_mode: bool,
     default_gamma: int,
+    target_home_batch_id: int | None = None,
+    draft_home_batch_id: int | None = None,
 ) -> StepPlan:
     """Wrap the existing scheduler output in a legacy-equivalent StepPlan.
 
     The supplied ``seqs`` are used as-is. No sequence ordering, batching,
-    budgets, KV state, or verification layout is changed by this helper. V3A
-    only shadows deterministic home-batch membership for future two-batch
-    scheduling and does not act on that metadata.
+    budgets, KV state, or verification layout is changed by this helper. V3B
+    only shadows membership-aware two-batch planning metadata; actual execution
+    of verify(A) || draft(B) is deferred to a later PR.
     """
     scheduled_seq_ids = [seq.seq_id for seq in seqs]
     role = role_from_runner(runner_role, is_prefill)
@@ -159,6 +173,16 @@ def build_legacy_step_plan(
     else:
         draft_home_seq_ids = []
         target_seq_ids = list(scheduled_seq_ids)
+
+    plan_two_batch_shadow = not is_prefill
+    target_batch_seq_ids = [
+        seq.seq_id for seq in seqs if seq.home_batch_id == target_home_batch_id
+    ]
+    draft_home_batch_seq_ids = [
+        seq.seq_id for seq in seqs if seq.home_batch_id == draft_home_batch_id
+    ]
+    classified = set(target_batch_seq_ids) | set(draft_home_batch_seq_ids)
+    off_batch_seq_ids = [seq.seq_id for seq in seqs if seq.seq_id not in classified]
 
     requests = [
         PlanRequest(
@@ -188,5 +212,11 @@ def build_legacy_step_plan(
         target_seq_ids=target_seq_ids,
         draft_home_seq_ids=draft_home_seq_ids,
         eager_seq_ids=[],
+        target_home_batch_id=target_home_batch_id,
+        draft_home_batch_id=draft_home_batch_id,
+        target_batch_seq_ids=target_batch_seq_ids,
+        draft_home_batch_seq_ids=draft_home_batch_seq_ids,
+        off_batch_seq_ids=off_batch_seq_ids,
+        plan_two_batch_shadow=plan_two_batch_shadow,
         requests=requests,
     )

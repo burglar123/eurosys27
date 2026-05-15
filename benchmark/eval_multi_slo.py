@@ -418,6 +418,13 @@ PLAN_REQUEST_FIELDS = [
     "home_batch_id",
     "home_batch_ids",
     "plan_home_batch_ids",
+    "target_home_batch_ids",
+    "draft_home_batch_ids",
+    "last_target_home_batch_id",
+    "last_draft_home_batch_id",
+    "plan_two_batch_shadow",
+    "target_batch_hit_count",
+    "draft_home_batch_hit_count",
     "is_eager",
     "plan_roles",
 ]
@@ -585,6 +592,11 @@ def aggregate_low_level_traces(
         plan_target_seq_ids: List[Any] = []
         plan_draft_home_seq_ids: List[Any] = []
         plan_eager_seq_ids: List[Any] = []
+        target_home_batch_ids: List[int] = []
+        draft_home_batch_ids: List[int] = []
+        plan_two_batch_shadow_values: List[bool] = []
+        target_batch_hit_count = 0
+        draft_home_batch_hit_count = 0
 
         for entry in entries:
             e = entry["event"]
@@ -639,6 +651,24 @@ def aggregate_low_level_traces(
                 if isinstance(value, list):
                     for item in value:
                         append_unique(dst, item)
+
+            target_home_batch_id = to_int(e.get("target_home_batch_id"))
+            draft_home_batch_id = to_int(e.get("draft_home_batch_id"))
+            append_unique(target_home_batch_ids, target_home_batch_id)
+            append_unique(draft_home_batch_ids, draft_home_batch_id)
+            if e.get("plan_two_batch_shadow") is not None:
+                plan_two_batch_shadow_values.append(bool(e.get("plan_two_batch_shadow")))
+            target_batch_seq_ids = e.get("target_batch_seq_ids")
+            draft_home_batch_seq_ids = e.get("draft_home_batch_seq_ids")
+            member_keys = {str(x) for x in (member_seq_id, member) if x is not None}
+            if isinstance(target_batch_seq_ids, list) and member_keys.intersection(
+                str(x) for x in target_batch_seq_ids
+            ):
+                target_batch_hit_count += 1
+            if isinstance(draft_home_batch_seq_ids, list) and member_keys.intersection(
+                str(x) for x in draft_home_batch_seq_ids
+            ):
+                draft_home_batch_hit_count += 1
 
             effective_gamma_values.append(
                 value_for_any_member(
@@ -697,6 +727,16 @@ def aggregate_low_level_traces(
             )
         elif is_eager_values:
             row["is_eager"] = False
+        if target_home_batch_ids:
+            row["target_home_batch_ids"] = target_home_batch_ids
+            row["last_target_home_batch_id"] = target_home_batch_ids[-1]
+        if draft_home_batch_ids:
+            row["draft_home_batch_ids"] = draft_home_batch_ids
+            row["last_draft_home_batch_id"] = draft_home_batch_ids[-1]
+        if plan_two_batch_shadow_values:
+            row["plan_two_batch_shadow"] = any(plan_two_batch_shadow_values)
+        row["target_batch_hit_count"] = target_batch_hit_count
+        row["draft_home_batch_hit_count"] = draft_home_batch_hit_count
         if plan_roles:
             row["plan_roles"] = plan_roles
         if plan_scheduled_seq_ids:
@@ -1526,6 +1566,13 @@ def trace_export_record(row: Dict[str, Any], execution_mode: str, decode_ready: 
         "home_batch_id": row.get("home_batch_id"),
         "home_batch_ids": row.get("home_batch_ids"),
         "plan_home_batch_ids": row.get("plan_home_batch_ids"),
+        "target_home_batch_ids": row.get("target_home_batch_ids"),
+        "draft_home_batch_ids": row.get("draft_home_batch_ids"),
+        "last_target_home_batch_id": row.get("last_target_home_batch_id"),
+        "last_draft_home_batch_id": row.get("last_draft_home_batch_id"),
+        "plan_two_batch_shadow": row.get("plan_two_batch_shadow"),
+        "target_batch_hit_count": row.get("target_batch_hit_count"),
+        "draft_home_batch_hit_count": row.get("draft_home_batch_hit_count"),
         "is_eager": row.get("is_eager"),
         "plan_roles": row.get("plan_roles"),
         "execution_mode": row.get("execution_mode", execution_mode),
