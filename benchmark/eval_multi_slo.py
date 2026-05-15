@@ -194,18 +194,30 @@ def get_request_prompt(req: Dict[str, Any]) -> Any:
     return req["prompt"]
 
 
-def absolute_arrival_ts(
+def materialize_arrival_ts(
     req: Dict[str, Any],
     workload_start_ts: float,
     use_absolute_arrival_ts: bool,
+    replay_arrivals: bool,
 ) -> float:
+    """Return the wall-clock arrival timestamp to pass to the engine.
+
+    ``arrival_offset_sec`` is workload metadata. It becomes a wall-clock
+    timestamp only when we are replaying arrivals. In offline/chunked mode all
+    requests are prepared immediately, so the evaluator records the real time at
+    which the request is materialized instead of adding the offset to a synthetic
+    workload start.
+    """
     if use_absolute_arrival_ts and "arrival_ts" in req:
         return float(req["arrival_ts"])
 
-    if "arrival_offset_sec" in req:
+    if replay_arrivals and "arrival_offset_sec" in req:
         return workload_start_ts + float(req["arrival_offset_sec"])
 
-    return float(req["arrival_ts"])
+    if "arrival_offset_sec" not in req and "arrival_ts" in req:
+        return float(req["arrival_ts"])
+
+    return time.time()
 
 
 def add_request_with_metadata(
@@ -398,6 +410,80 @@ def flatten_trace_stats(row: Dict[str, Any]) -> None:
             row[dst] = stats[src]
 
 
+PLAN_REQUEST_FIELDS = [
+    "plan_ids",
+    "last_plan_id",
+    "plan_legacy_equivalent",
+    "effective_gamma",
+    "home_batch_id",
+    "is_eager",
+    "plan_roles",
+]
+
+
+def append_unique(dst: List[Any], value: Any) -> None:
+    if value is None:
+        return
+    if value not in dst:
+        dst.append(value)
+
+
+def value_for_any_member(value: Any, idx: int, *members: Any) -> Any:
+    if isinstance(value, dict):
+        for member in members:
+            if member is None:
+                continue
+            if member in value:
+                return value[member]
+            member_str = str(member)
+            if member_str in value:
+                return value[member_str]
+        return None
+    return value_for_member(value, idx, members[0] if members else None)
+
+
+def trace_identities(row: Dict[str, Any]) -> List[str]:
+    identities: List[str] = []
+    req_id = first_present(row, REQUEST_ID_KEYS)
+    if req_id is not None:
+        identities.append(f"request:{req_id}")
+    seq_id = first_present(row, SEQ_ID_KEYS)
+    if seq_id is not None:
+        identities.append(f"seq:{seq_id}")
+    return identities
+
+
+def plan_fields_from_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {key: row[key] for key in PLAN_REQUEST_FIELDS if key in row}
+
+
+def overlay_plan_fields(
+    request_rows: List[Dict[str, Any]],
+    plan_rows: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not request_rows or not plan_rows:
+        return request_rows
+
+    plan_by_identity: Dict[str, Dict[str, Any]] = {}
+    for row in plan_rows:
+        for identity in trace_identities(row):
+            plan_by_identity[identity] = row
+    merged_rows: List[Dict[str, Any]] = []
+    for idx, row in enumerate(request_rows):
+        merged = dict(row)
+        plan_row = None
+        for identity in trace_identities(row):
+            plan_row = plan_by_identity.get(identity)
+            if plan_row is not None:
+                break
+        if plan_row is None and idx < len(plan_rows):
+            plan_row = plan_rows[idx]
+        if plan_row is not None:
+            merged.update(plan_fields_from_row(plan_row))
+        merged_rows.append(merged)
+    return merged_rows
+
+
 def aggregate_low_level_traces(
     trace_rows: List[Dict[str, Any]],
     abs_workload: List[Dict[str, Any]],
@@ -433,11 +519,25 @@ def aggregate_low_level_traces(
 
         for idx, (key_name, member_id) in enumerate(members):
             group_key = str(member_id)
+            member_seq_id = None
+            if isinstance(seq_ids, list) and idx < len(seq_ids):
+                member_seq_id = seq_ids[idx]
+            elif key_name == "seq_id":
+                member_seq_id = member_id
             if key_name == "seq_id" and group_key in seq_to_request:
                 group_key = seq_to_request[group_key]
             member_event = dict(event)
             member_event[key_name] = member_id
-            groups[group_key].append({"event": member_event, "member": member_id, "member_idx": idx})
+            if member_seq_id is not None:
+                member_event["seq_id"] = member_seq_id
+            groups[group_key].append(
+                {
+                    "event": member_event,
+                    "member": member_id,
+                    "member_seq_id": member_seq_id,
+                    "member_idx": idx,
+                }
+            )
 
     aggregated: List[Dict[str, Any]] = []
     for group_key, entries in groups.items():
@@ -473,18 +573,132 @@ def aggregate_low_level_traces(
 
         accepted: List[Any] = []
         invalidated: List[Any] = []
+        plan_ids: List[int] = []
+        plan_roles: List[str] = []
+        plan_legacy_values: List[bool] = []
+        effective_gamma_values: List[Any] = []
+        home_batch_id_values: List[Any] = []
+        is_eager_values: List[Any] = []
+        plan_scheduled_seq_ids: List[Any] = []
+        plan_target_seq_ids: List[Any] = []
+        plan_draft_home_seq_ids: List[Any] = []
+        plan_eager_seq_ids: List[Any] = []
+
         for entry in entries:
             e = entry["event"]
             member = entry["member"]
+            member_seq_id = entry.get("member_seq_id")
             idx = entry["member_idx"]
-            accepted.append(value_for_member(first_present(e, ["accepted_tokens_per_seq", "per_seq_accepted_len", "accepted_tokens"]), idx, member))
-            invalidated.append(value_for_member(first_present(e, ["per_seq_invalidated_predraft_len", "invalidated_predraft_tokens"]), idx, member))
+            accepted.append(
+                value_for_any_member(
+                    first_present(
+                        e,
+                        [
+                            "accepted_tokens_per_seq",
+                            "per_seq_accepted_len",
+                            "accepted_tokens",
+                        ],
+                    ),
+                    idx,
+                    member_seq_id,
+                    member,
+                )
+            )
+            invalidated.append(
+                value_for_any_member(
+                    first_present(
+                        e,
+                        [
+                            "per_seq_invalidated_predraft_len",
+                            "invalidated_predraft_tokens",
+                        ],
+                    ),
+                    idx,
+                    member_seq_id,
+                    member,
+                )
+            )
+
+            plan_id = to_int(e.get("plan_id"))
+            if plan_id is not None:
+                append_unique(plan_ids, plan_id)
+            if (
+                "plan_legacy_equivalent" in e
+                and e.get("plan_legacy_equivalent") is not None
+            ):
+                plan_legacy_values.append(bool(e.get("plan_legacy_equivalent")))
+            append_unique(plan_roles, e.get("plan_runner_role"))
+            for value, dst in (
+                (e.get("plan_scheduled_seq_ids"), plan_scheduled_seq_ids),
+                (e.get("plan_target_seq_ids"), plan_target_seq_ids),
+                (e.get("plan_draft_home_seq_ids"), plan_draft_home_seq_ids),
+                (e.get("plan_eager_seq_ids"), plan_eager_seq_ids),
+            ):
+                if isinstance(value, list):
+                    for item in value:
+                        append_unique(dst, item)
+
+            effective_gamma_values.append(
+                value_for_any_member(
+                    e.get("effective_gamma_per_seq"), idx, member_seq_id, member
+                )
+            )
+            home_batch_id_values.append(
+                value_for_any_member(
+                    e.get("home_batch_id_per_seq"), idx, member_seq_id, member
+                )
+            )
+            is_eager_values.append(
+                value_for_any_member(
+                    e.get("is_eager_per_seq"), idx, member_seq_id, member
+                )
+            )
         accepted_sum = numeric_sum(accepted)
         invalidated_sum = numeric_sum(invalidated)
         if accepted_sum is not None:
             row["accepted_tokens"] = int(accepted_sum)
         if invalidated_sum is not None:
             row["invalidated_predraft_tokens"] = int(invalidated_sum)
+
+        if plan_ids:
+            row["plan_ids"] = plan_ids
+            row["last_plan_id"] = plan_ids[-1]
+        if plan_legacy_values:
+            row["plan_legacy_equivalent"] = all(plan_legacy_values)
+        effective_gamma_candidates = [
+            to_int(value) for value in effective_gamma_values if to_int(value) is not None
+        ]
+        effective_gamma = (
+            effective_gamma_candidates[-1] if effective_gamma_candidates else None
+        )
+        if effective_gamma is not None:
+            row["effective_gamma"] = effective_gamma
+        if any(value is not None for value in home_batch_id_values):
+            row["home_batch_id"] = next(
+                (value for value in reversed(home_batch_id_values) if value is not None),
+                None,
+            )
+        elif home_batch_id_values:
+            row["home_batch_id"] = None
+        if any(value is not None for value in is_eager_values):
+            row["is_eager"] = bool(
+                next(
+                    (value for value in reversed(is_eager_values) if value is not None),
+                    False,
+                )
+            )
+        elif is_eager_values:
+            row["is_eager"] = False
+        if plan_roles:
+            row["plan_roles"] = plan_roles
+        if plan_scheduled_seq_ids:
+            row["plan_scheduled_seq_ids"] = plan_scheduled_seq_ids
+        if plan_target_seq_ids:
+            row["plan_target_seq_ids"] = plan_target_seq_ids
+        if plan_draft_home_seq_ids:
+            row["plan_draft_home_seq_ids"] = plan_draft_home_seq_ids
+        if plan_eager_seq_ids:
+            row["plan_eager_seq_ids"] = plan_eager_seq_ids
 
         row["num_low_level_events"] = len(events)
         aggregated.append(row)
@@ -562,9 +776,15 @@ def request_level_traces_from_payload(
     abs_workload: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
     high_level = extract_high_level_trace_list(trace_payload)
+    low_level = list(iter_low_level_trace_rows(trace_payload))
     if high_level:
-        return select_request_level_traces(high_level, abs_workload)
-    return select_request_level_traces(list(iter_low_level_trace_rows(trace_payload)), abs_workload)
+        request_rows = select_request_level_traces(high_level, abs_workload)
+        # Engines often return accurate request summaries under ``requests`` and
+        # scheduler/StepPlan details under low-level ``traces``. Preserve the
+        # request summary timing fields and overlay only compact plan metadata.
+        plan_rows = aggregate_low_level_traces(low_level, abs_workload) if low_level else []
+        return overlay_plan_fields(request_rows, plan_rows)
+    return select_request_level_traces(low_level, abs_workload)
 
 
 def first_present(row: Dict[str, Any], keys: List[str]) -> Any:
@@ -732,15 +952,17 @@ def build_abs_workload(
     workload: List[Dict[str, Any]],
     workload_start_ts: float,
     use_absolute_arrival_ts: bool,
+    replay_arrivals: bool,
 ) -> List[Dict[str, Any]]:
     abs_workload: List[Dict[str, Any]] = []
 
     for req in workload:
         row = dict(req)
-        row["arrival_ts"] = absolute_arrival_ts(
+        row["arrival_ts"] = materialize_arrival_ts(
             req,
             workload_start_ts=workload_start_ts,
             use_absolute_arrival_ts=use_absolute_arrival_ts,
+            replay_arrivals=replay_arrivals,
         )
         abs_workload.append(row)
 
@@ -831,6 +1053,7 @@ def merge_traces_with_workload(
             pass
 
         row["run_start_ts"] = run_start_ts
+        row["decode_start_ts"] = max(run_start_ts, run_end_ts - engine_elapsed_s)
         row["finish_ts"] = run_end_ts
         row["decode_elapsed_ms"] = engine_elapsed_s * 1000.0
 
@@ -838,6 +1061,135 @@ def merge_traces_with_workload(
 
     return merged
 
+
+
+
+def normalize_request_timing(
+    row: Dict[str, Any],
+    num_output_tokens: int,
+    decode_ready: bool,
+) -> Dict[str, Any]:
+    """Normalize request-level decode timing fields.
+
+    In decode-ready evaluation, prefill is intentionally outside the measured
+    interval. If wall-clock decode start and finish timestamps are available,
+    they are the source of truth for request-level elapsed time and TPOT.
+    """
+    finish_ts = to_float(
+        first_present(row, ["finish_ts", "finished_ts", "end_ts", "end_time"])
+    )
+    decode_start_ts = to_float(
+        first_present(
+            row,
+            [
+                "decode_start_ts",
+                "decoding_start_ts",
+                "first_decode_ts",
+                "first_token_ts",
+                "start_decode_ts",
+            ],
+        )
+    )
+
+    if decode_ready and finish_ts is not None and decode_start_ts is not None:
+        if finish_ts >= decode_start_ts:
+            decode_elapsed_ms = (finish_ts - decode_start_ts) * 1000.0
+            row["decode_elapsed_ms"] = decode_elapsed_ms
+            row["observed_tpot_ms"] = (
+                decode_elapsed_ms / num_output_tokens if num_output_tokens > 0 else None
+            )
+        else:
+            row["decode_elapsed_ms"] = None
+            row["observed_tpot_ms"] = None
+
+    return row
+
+
+def validate_timing_invariants(rows: List[Dict[str, Any]], decode_ready: bool) -> None:
+    arrival_after_finish = 0
+    missing_decode_elapsed = 0
+    finish_before_decode_start = 0
+    missing_observed_tpot = 0
+    elapsed_mismatch = 0
+    tpot_mismatch = 0
+    suspicious_short = 0
+    tol_ms = 1e-3
+
+    for row in rows:
+        arrival_ts = to_float(row.get("arrival_ts"))
+        finish_ts = to_float(
+            first_present(row, ["finish_ts", "finished_ts", "end_ts", "end_time"])
+        )
+        decode_start_ts = to_float(
+            first_present(
+                row,
+                [
+                    "decode_start_ts",
+                    "decoding_start_ts",
+                    "first_decode_ts",
+                    "first_token_ts",
+                    "start_decode_ts",
+                ],
+            )
+        )
+        decode_elapsed_ms = to_float(row.get("decode_elapsed_ms"))
+        observed_tpot_ms = to_float(row.get("observed_tpot_ms"))
+        num_output_tokens = infer_num_output_tokens(row)
+
+        if arrival_ts is not None and finish_ts is not None and arrival_ts > finish_ts:
+            arrival_after_finish += 1
+        if decode_ready and decode_elapsed_ms is None:
+            missing_decode_elapsed += 1
+        if finish_ts is not None and decode_start_ts is not None:
+            if finish_ts < decode_start_ts:
+                finish_before_decode_start += 1
+            else:
+                expected_elapsed_ms = (finish_ts - decode_start_ts) * 1000.0
+                if (
+                    decode_elapsed_ms is not None
+                    and abs(decode_elapsed_ms - expected_elapsed_ms) > tol_ms
+                ):
+                    elapsed_mismatch += 1
+        if num_output_tokens > 0 and observed_tpot_ms is None:
+            missing_observed_tpot += 1
+        if (
+            num_output_tokens > 0
+            and decode_elapsed_ms is not None
+            and observed_tpot_ms is not None
+        ):
+            expected_tpot_ms = decode_elapsed_ms / num_output_tokens
+            if abs(observed_tpot_ms - expected_tpot_ms) > tol_ms:
+                tpot_mismatch += 1
+        if (
+            decode_ready
+            and num_output_tokens > 200
+            and decode_elapsed_ms is not None
+            and decode_elapsed_ms < 1000
+        ):
+            suspicious_short += 1
+
+    warnings = [
+        (arrival_after_finish, "row(s) have arrival_ts > finish_ts"),
+        (missing_decode_elapsed, "decode-ready row(s) are missing decode_elapsed_ms"),
+        (finish_before_decode_start, "row(s) have finish_ts < decode_start_ts"),
+        (missing_observed_tpot, "row(s) with output tokens are missing observed_tpot_ms"),
+        (
+            elapsed_mismatch,
+            "row(s) have decode_elapsed_ms inconsistent with finish_ts - decode_start_ts",
+        ),
+        (
+            tpot_mismatch,
+            "row(s) have observed_tpot_ms inconsistent with decode_elapsed_ms / tokens",
+        ),
+        (
+            suspicious_short,
+            "decode-ready row(s) generated >200 tokens in <1000ms; "
+            "verify wall-clock timestamps",
+        ),
+    ]
+    for count, message in warnings:
+        if count:
+            print(f"[WARN] Timing invariant: {count} {message}.")
 
 def choose_goodput_denominator_s(
     rows: List[Dict[str, Any]],
@@ -922,6 +1274,7 @@ def compute_metrics(
     engine_elapsed_s: float,
     denominator_mode: str,
     workload_meta: Dict[str, Any],
+    decode_ready: bool = False,
 ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     evaluated_rows: List[Dict[str, Any]] = []
 
@@ -930,6 +1283,13 @@ def compute_metrics(
 
         num_output_tokens = infer_num_output_tokens(row)
         row["num_output_tokens"] = int(num_output_tokens)
+        row = normalize_request_timing(row, num_output_tokens, decode_ready=decode_ready)
+        if row.get("decode_elapsed_ms") is None:
+            row["decode_elapsed_ms"] = infer_decode_elapsed_ms(
+                row,
+                num_output_tokens=num_output_tokens,
+                fallback_engine_elapsed_s=engine_elapsed_s,
+            )
 
         observed_tpot_ms = infer_observed_tpot_ms(
             row,
@@ -937,6 +1297,13 @@ def compute_metrics(
             fallback_engine_elapsed_s=engine_elapsed_s,
         )
         row["observed_tpot_ms"] = observed_tpot_ms
+        if (
+            decode_ready
+            and row.get("decode_elapsed_ms") is not None
+            and num_output_tokens > 0
+        ):
+            observed_tpot_ms = row["decode_elapsed_ms"] / num_output_tokens
+            row["observed_tpot_ms"] = observed_tpot_ms
 
         slo_tpot_ms = to_float(row.get("slo_tpot_ms"))
         row["slo_tpot_ms"] = slo_tpot_ms
@@ -947,6 +1314,8 @@ def compute_metrics(
             row["slo_attained"] = observed_tpot_ms <= slo_tpot_ms
 
         evaluated_rows.append(row)
+
+    validate_timing_invariants(evaluated_rows, decode_ready=decode_ready)
 
     denominator_s = choose_goodput_denominator_s(
         evaluated_rows,
@@ -1066,6 +1435,13 @@ def add_workload_chunk(
             if sleep_s > 0:
                 time.sleep(sleep_s)
 
+        if not args.use_workload_absolute_arrival_ts:
+            # For offline/chunked evaluation, workload offsets are metadata; the
+            # request's wall-clock arrival is when we actually enqueue it. When
+            # --replay-arrivals is enabled this timestamp is taken after any
+            # sleep, so it still reflects the real enqueue time.
+            req["arrival_ts"] = time.time()
+
         sampling_params = make_sampling_params(req, args)
         prompt = get_request_prompt(req)
 
@@ -1134,8 +1510,20 @@ def trace_export_record(row: Dict[str, Any], execution_mode: str, decode_ready: 
         "category": row.get("category"),
         "slo_class": row.get("slo_class"),
         "slo_tpot_ms": row.get("slo_tpot_ms"),
+        "per_request_gamma": row.get("per_request_gamma"),
+        "plan_ids": row.get("plan_ids"),
+        "last_plan_id": row.get("last_plan_id"),
+        "plan_legacy_equivalent": row.get("plan_legacy_equivalent"),
+        "effective_gamma": row.get("effective_gamma"),
+        "home_batch_id": row.get("home_batch_id"),
+        "is_eager": row.get("is_eager"),
+        "plan_roles": row.get("plan_roles"),
         "execution_mode": row.get("execution_mode", execution_mode),
         "decode_ready_mode": row.get("decode_ready_mode", decode_ready),
+        "arrival_offset_sec": row.get("arrival_offset_sec"),
+        "arrival_ts": row.get("arrival_ts"),
+        "decode_ready_ts": row.get("decode_ready_ts"),
+        "first_token_ts": row.get("first_token_ts"),
         "num_output_tokens": row.get("num_output_tokens"),
         "num_decode_output_tokens": row.get("num_decode_output_tokens"),
         "num_acc_tokens": row.get("num_acc_tokens"),
@@ -1300,6 +1688,7 @@ def main() -> None:
             workload,
             workload_start_ts=workload_start_ts,
             use_absolute_arrival_ts=args.use_workload_absolute_arrival_ts,
+            replay_arrivals=args.replay_arrivals,
         )
 
         if args.eval_batch_size is not None and args.eval_batch_size <= 0:
@@ -1350,6 +1739,7 @@ def main() -> None:
             engine_elapsed_s=elapsed_time,
             denominator_mode=args.goodput_denominator,
             workload_meta=workload_meta,
+            decode_ready=bool(args.decode_ready),
         )
         metrics["execution_mode"] = args.execution_mode
         metrics["decode_ready_mode"] = bool(args.decode_ready)
