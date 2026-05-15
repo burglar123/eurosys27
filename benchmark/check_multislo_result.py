@@ -12,6 +12,7 @@ import argparse
 import json
 import statistics
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -117,6 +118,9 @@ def summarize_plan_rows(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     legacy_false = 0
     eager_true = 0
     non_null_home_batch_id = 0
+    null_home_batch_id = 0
+    raw_home_batch_id_values = set()
+    raw_home_batch_id_counts: Counter[Any] = Counter()
     plan_ids: List[int] = []
     plan_id_role_counts: Dict[tuple[Any, Any], int] = {}
 
@@ -175,12 +179,19 @@ def summarize_plan_rows(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         if any(value is True for value in eager_values):
             eager_true += 1
 
-        home_values = values_from_mapping(row.get("home_batch_id_per_seq"))
-        home_values += values_from_mapping(signature.get("home_batch_id_per_seq"))
+        row_home_values = values_from_mapping(row.get("home_batch_id_per_seq"))
+        signature_home_values = values_from_mapping(signature.get("home_batch_id_per_seq"))
+        home_values = row_home_values if row_home_values else signature_home_values
         if row.get("home_batch_id") is not None:
             home_values.append(row.get("home_batch_id"))
         if any(value is not None for value in home_values):
             non_null_home_batch_id += 1
+        if any(value is None for value in home_values) or not home_values:
+            null_home_batch_id += 1
+        for value in home_values:
+            if value is not None:
+                raw_home_batch_id_values.add(value)
+                raw_home_batch_id_counts[value] += 1
 
     duplicate_plan_ids_by_role = {
         f"{role}:{plan_id}": count
@@ -195,6 +206,11 @@ def summarize_plan_rows(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         "plan_legacy_equivalent_false": legacy_false,
         "plan_is_eager_true": eager_true,
         "plan_home_batch_id_non_null": non_null_home_batch_id,
+        "plan_home_batch_id_null": null_home_batch_id,
+        "raw_unique_home_batch_id_values": sorted(raw_home_batch_id_values, key=str),
+        "raw_count_per_home_batch_id": dict(
+            sorted(raw_home_batch_id_counts.items(), key=lambda kv: str(kv[0]))
+        ),
         "plan_id_min": min(plan_ids) if plan_ids else None,
         "plan_id_max": max(plan_ids) if plan_ids else None,
         "duplicate_plan_id_by_role": duplicate_plan_ids_by_role,
@@ -227,6 +243,8 @@ def summarize(path: Path) -> int:
     effective_gamma_values = set()
     eager_true = 0
     non_null_home_batch_id = 0
+    home_batch_id_values = set()
+    home_batch_id_counts: Counter[Any] = Counter()
     rows_with_plan_ids = 0
 
     for row in rows:
@@ -261,6 +279,8 @@ def summarize(path: Path) -> int:
             eager_true += 1
         if row.get("home_batch_id") is not None:
             non_null_home_batch_id += 1
+            home_batch_id_values.add(row.get("home_batch_id"))
+            home_batch_id_counts[row.get("home_batch_id")] += 1
         plan_ids = row.get("plan_ids")
         if isinstance(plan_ids, list) and plan_ids:
             rows_with_plan_ids += 1
@@ -285,6 +305,8 @@ def summarize(path: Path) -> int:
     print(f"unique effective_gamma values: {sorted(effective_gamma_values, key=str)}")
     print(f"rows with is_eager=true: {eager_true}")
     print(f"rows with non-null home_batch_id: {non_null_home_batch_id}")
+    print(f"unique home_batch_id values: {sorted(home_batch_id_values, key=str)}")
+    print(f"count per home_batch_id: {dict(sorted(home_batch_id_counts.items(), key=lambda kv: str(kv[0])))}")
     print(f"rows with plan_ids: {rows_with_plan_ids}")
 
     plan_summary = summarize_plan_rows(rows)
@@ -302,6 +324,18 @@ def summarize(path: Path) -> int:
     print(
         "raw plan rows with non-null home_batch_id: "
         f"{plan_summary['plan_home_batch_id_non_null']}"
+    )
+    print(
+        "raw plan rows with null home_batch_id: "
+        f"{plan_summary['plan_home_batch_id_null']}"
+    )
+    print(
+        "raw unique home_batch_id values: "
+        f"{plan_summary['raw_unique_home_batch_id_values']}"
+    )
+    print(
+        "raw count per home_batch_id: "
+        f"{plan_summary['raw_count_per_home_batch_id']}"
     )
     print(
         "raw plan_id range: "

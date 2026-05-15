@@ -30,7 +30,7 @@ class PlanRequest:
     seq_id: int
     request_id: Any
     role: PlanRole
-    home_batch_id: str | None
+    home_batch_id: int | str | None
     is_eager: bool
     effective_gamma: int
     draft_budget: int
@@ -59,7 +59,7 @@ class StepPlan:
         return {request.seq_id: request.effective_gamma for request in self.requests}
 
     @property
-    def home_batch_id_per_seq(self) -> dict[int, str | None]:
+    def home_batch_id_per_seq(self) -> dict[int, int | str | None]:
         return {request.seq_id: request.home_batch_id for request in self.requests}
 
     @property
@@ -140,7 +140,9 @@ def build_legacy_step_plan(
     """Wrap the existing scheduler output in a legacy-equivalent StepPlan.
 
     The supplied ``seqs`` are used as-is. No sequence ordering, batching,
-    budgets, KV state, or verification layout is changed by this helper.
+    budgets, KV state, or verification layout is changed by this helper. V3A
+    only shadows deterministic home-batch membership for future two-batch
+    scheduling and does not act on that metadata.
     """
     scheduled_seq_ids = [seq.seq_id for seq in seqs]
     role = role_from_runner(runner_role, is_prefill)
@@ -163,7 +165,7 @@ def build_legacy_step_plan(
             seq_id=seq.seq_id,
             request_id=seq.request_id,
             role=role,
-            home_batch_id=None,
+            home_batch_id=seq.home_batch_id,
             is_eager=False,
             effective_gamma=effective_gamma,
             draft_budget=draft_budget,

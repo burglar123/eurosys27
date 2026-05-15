@@ -24,6 +24,11 @@ class Scheduler:
         self.running: deque[Sequence] = deque()
         self.finished: list[Sequence] = []
         self.iteration_id = 0
+        # ST-Spec V3A shadow metadata only: assign deterministic 0/1 home
+        # membership when requests enter the scheduler. This does not change
+        # scheduling order or execution behavior; actual two-batch scheduling is
+        # deferred to a later PR.
+        self.next_home_batch_id = 0
 
     def next_batch_id(self, runner_role: str) -> tuple[int, str]:
         iteration_id = self.iteration_id
@@ -34,6 +39,9 @@ class Scheduler:
         return not self.waiting and not self.running
 
     def add(self, seq: Sequence):
+        if seq.home_batch_id is None:
+            seq.home_batch_id = self.next_home_batch_id
+            self.next_home_batch_id = 1 - self.next_home_batch_id
         self.waiting.append(seq)
 
     def schedule(self) -> tuple[list[Sequence], bool]:
@@ -127,6 +135,7 @@ class Scheduler:
             seq = self.finished.pop()
             self.block_manager.deallocate(seq)
         self.iteration_id = 0
+        self.next_home_batch_id = 0
         self.block_manager.hash_to_block_id.clear()
         for block in self.block_manager.blocks:
             block.hash = -1

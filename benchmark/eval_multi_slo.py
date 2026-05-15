@@ -416,6 +416,8 @@ PLAN_REQUEST_FIELDS = [
     "plan_legacy_equivalent",
     "effective_gamma",
     "home_batch_id",
+    "home_batch_ids",
+    "plan_home_batch_ids",
     "is_eager",
     "plan_roles",
 ]
@@ -673,13 +675,19 @@ def aggregate_low_level_traces(
         )
         if effective_gamma is not None:
             row["effective_gamma"] = effective_gamma
-        if any(value is not None for value in home_batch_id_values):
-            row["home_batch_id"] = next(
-                (value for value in reversed(home_batch_id_values) if value is not None),
-                None,
-            )
+        home_batch_ids: List[int] = []
+        for value in home_batch_id_values:
+            value_int = to_int(value)
+            if value_int is not None:
+                append_unique(home_batch_ids, value_int)
+        if home_batch_ids:
+            row["home_batch_id"] = home_batch_ids[-1]
+            row["home_batch_ids"] = home_batch_ids
+            row["plan_home_batch_ids"] = home_batch_ids
         elif home_batch_id_values:
             row["home_batch_id"] = None
+            row["home_batch_ids"] = []
+            row["plan_home_batch_ids"] = []
         if any(value is not None for value in is_eager_values):
             row["is_eager"] = bool(
                 next(
@@ -1516,6 +1524,8 @@ def trace_export_record(row: Dict[str, Any], execution_mode: str, decode_ready: 
         "plan_legacy_equivalent": row.get("plan_legacy_equivalent"),
         "effective_gamma": row.get("effective_gamma"),
         "home_batch_id": row.get("home_batch_id"),
+        "home_batch_ids": row.get("home_batch_ids"),
+        "plan_home_batch_ids": row.get("plan_home_batch_ids"),
         "is_eager": row.get("is_eager"),
         "plan_roles": row.get("plan_roles"),
         "execution_mode": row.get("execution_mode", execution_mode),

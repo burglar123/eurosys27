@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib
 import os
+import pickle
 import sys
 import types
 from types import SimpleNamespace
@@ -58,7 +59,9 @@ def add_dummy_requests(scheduler: Scheduler) -> list[Sequence]:
         ),
     ]
     for seq in seqs:
+        assert seq.home_batch_id is None
         scheduler.add(seq)
+    assert [seq.home_batch_id for seq in seqs] == [0, 1]
     return seqs
 
 
@@ -68,7 +71,8 @@ def assert_legacy_plan_fields(step_plan, seqs, *, is_prefill: bool, expected_bud
     assert step_plan.scheduled_seq_ids == seq_ids
     assert step_plan.eager_seq_ids == []
     assert all(request.is_eager is False for request in step_plan.requests)
-    assert all(request.home_batch_id is None for request in step_plan.requests)
+    expected_home_batch_ids = {seq.seq_id: idx % 2 for idx, seq in enumerate(seqs)}
+    assert {request.seq_id: request.home_batch_id for request in step_plan.requests} == expected_home_batch_ids
     assert all(request.eager_budget == 0 for request in step_plan.requests)
     assert all(request.draft_budget == expected_budget for request in step_plan.requests)
     assert all(request.effective_gamma == 4 for request in step_plan.requests)
@@ -78,7 +82,7 @@ def assert_legacy_plan_fields(step_plan, seqs, *, is_prefill: bool, expected_bud
         assert all(request.role == PlanRole.DRAFT for request in step_plan.requests)
         assert step_plan.draft_home_seq_ids == seq_ids
     assert step_plan.is_eager_per_seq == {seq.seq_id: False for seq in seqs}
-    assert step_plan.home_batch_id_per_seq == {seq.seq_id: None for seq in seqs}
+    assert step_plan.home_batch_id_per_seq == expected_home_batch_ids
     assert step_plan.effective_gamma_per_seq == {seq.seq_id: 4 for seq in seqs}
     signature = step_plan.signature()
     assert signature["plan_id"] == step_plan.plan_id
@@ -86,7 +90,7 @@ def assert_legacy_plan_fields(step_plan, seqs, *, is_prefill: bool, expected_bud
     assert signature["scheduled_seq_ids"] == seq_ids
     assert signature["request_ids"] == [seq.request_id for seq in seqs]
     assert signature["effective_gamma_per_seq"] == {str(seq.seq_id): 4 for seq in seqs}
-    assert signature["home_batch_id_per_seq"] == {str(seq.seq_id): None for seq in seqs}
+    assert signature["home_batch_id_per_seq"] == {str(seq_id): home_batch_id for seq_id, home_batch_id in expected_home_batch_ids.items()}
     assert signature["is_eager_per_seq"] == {str(seq.seq_id): False for seq in seqs}
     assert stspec_plan.step_plan_digest(step_plan) == step_plan.digest()
 
@@ -104,6 +108,10 @@ def main() -> None:
         decode_ready_mode=False,
         default_gamma=4,
     )
+
+    assert [seq.home_batch_id for seq in planned_seqs] == [0, 1]
+    assert [seq.service_metadata()["home_batch_id"] for seq in planned_seqs] == [0, 1]
+    assert [pickle.loads(pickle.dumps(seq)).home_batch_id for seq in planned_seqs] == [0, 1]
 
     assert [seq.request_id for seq in planned_prefill] == [seq.request_id for seq in legacy_prefill]
     assert planned_is_prefill == legacy_is_prefill == True
