@@ -410,6 +410,80 @@ def flatten_trace_stats(row: Dict[str, Any]) -> None:
             row[dst] = stats[src]
 
 
+PLAN_REQUEST_FIELDS = [
+    "plan_ids",
+    "last_plan_id",
+    "plan_legacy_equivalent",
+    "effective_gamma",
+    "home_batch_id",
+    "is_eager",
+    "plan_roles",
+]
+
+
+def append_unique(dst: List[Any], value: Any) -> None:
+    if value is None:
+        return
+    if value not in dst:
+        dst.append(value)
+
+
+def value_for_any_member(value: Any, idx: int, *members: Any) -> Any:
+    if isinstance(value, dict):
+        for member in members:
+            if member is None:
+                continue
+            if member in value:
+                return value[member]
+            member_str = str(member)
+            if member_str in value:
+                return value[member_str]
+        return None
+    return value_for_member(value, idx, members[0] if members else None)
+
+
+def trace_identities(row: Dict[str, Any]) -> List[str]:
+    identities: List[str] = []
+    req_id = first_present(row, REQUEST_ID_KEYS)
+    if req_id is not None:
+        identities.append(f"request:{req_id}")
+    seq_id = first_present(row, SEQ_ID_KEYS)
+    if seq_id is not None:
+        identities.append(f"seq:{seq_id}")
+    return identities
+
+
+def plan_fields_from_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {key: row[key] for key in PLAN_REQUEST_FIELDS if key in row}
+
+
+def overlay_plan_fields(
+    request_rows: List[Dict[str, Any]],
+    plan_rows: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not request_rows or not plan_rows:
+        return request_rows
+
+    plan_by_identity: Dict[str, Dict[str, Any]] = {}
+    for row in plan_rows:
+        for identity in trace_identities(row):
+            plan_by_identity[identity] = row
+    merged_rows: List[Dict[str, Any]] = []
+    for idx, row in enumerate(request_rows):
+        merged = dict(row)
+        plan_row = None
+        for identity in trace_identities(row):
+            plan_row = plan_by_identity.get(identity)
+            if plan_row is not None:
+                break
+        if plan_row is None and idx < len(plan_rows):
+            plan_row = plan_rows[idx]
+        if plan_row is not None:
+            merged.update(plan_fields_from_row(plan_row))
+        merged_rows.append(merged)
+    return merged_rows
+
+
 def aggregate_low_level_traces(
     trace_rows: List[Dict[str, Any]],
     abs_workload: List[Dict[str, Any]],
@@ -445,11 +519,25 @@ def aggregate_low_level_traces(
 
         for idx, (key_name, member_id) in enumerate(members):
             group_key = str(member_id)
+            member_seq_id = None
+            if isinstance(seq_ids, list) and idx < len(seq_ids):
+                member_seq_id = seq_ids[idx]
+            elif key_name == "seq_id":
+                member_seq_id = member_id
             if key_name == "seq_id" and group_key in seq_to_request:
                 group_key = seq_to_request[group_key]
             member_event = dict(event)
             member_event[key_name] = member_id
-            groups[group_key].append({"event": member_event, "member": member_id, "member_idx": idx})
+            if member_seq_id is not None:
+                member_event["seq_id"] = member_seq_id
+            groups[group_key].append(
+                {
+                    "event": member_event,
+                    "member": member_id,
+                    "member_seq_id": member_seq_id,
+                    "member_idx": idx,
+                }
+            )
 
     aggregated: List[Dict[str, Any]] = []
     for group_key, entries in groups.items():
@@ -485,18 +573,132 @@ def aggregate_low_level_traces(
 
         accepted: List[Any] = []
         invalidated: List[Any] = []
+        plan_ids: List[int] = []
+        plan_roles: List[str] = []
+        plan_legacy_values: List[bool] = []
+        effective_gamma_values: List[Any] = []
+        home_batch_id_values: List[Any] = []
+        is_eager_values: List[Any] = []
+        plan_scheduled_seq_ids: List[Any] = []
+        plan_target_seq_ids: List[Any] = []
+        plan_draft_home_seq_ids: List[Any] = []
+        plan_eager_seq_ids: List[Any] = []
+
         for entry in entries:
             e = entry["event"]
             member = entry["member"]
+            member_seq_id = entry.get("member_seq_id")
             idx = entry["member_idx"]
-            accepted.append(value_for_member(first_present(e, ["accepted_tokens_per_seq", "per_seq_accepted_len", "accepted_tokens"]), idx, member))
-            invalidated.append(value_for_member(first_present(e, ["per_seq_invalidated_predraft_len", "invalidated_predraft_tokens"]), idx, member))
+            accepted.append(
+                value_for_any_member(
+                    first_present(
+                        e,
+                        [
+                            "accepted_tokens_per_seq",
+                            "per_seq_accepted_len",
+                            "accepted_tokens",
+                        ],
+                    ),
+                    idx,
+                    member_seq_id,
+                    member,
+                )
+            )
+            invalidated.append(
+                value_for_any_member(
+                    first_present(
+                        e,
+                        [
+                            "per_seq_invalidated_predraft_len",
+                            "invalidated_predraft_tokens",
+                        ],
+                    ),
+                    idx,
+                    member_seq_id,
+                    member,
+                )
+            )
+
+            plan_id = to_int(e.get("plan_id"))
+            if plan_id is not None:
+                append_unique(plan_ids, plan_id)
+            if (
+                "plan_legacy_equivalent" in e
+                and e.get("plan_legacy_equivalent") is not None
+            ):
+                plan_legacy_values.append(bool(e.get("plan_legacy_equivalent")))
+            append_unique(plan_roles, e.get("plan_runner_role"))
+            for value, dst in (
+                (e.get("plan_scheduled_seq_ids"), plan_scheduled_seq_ids),
+                (e.get("plan_target_seq_ids"), plan_target_seq_ids),
+                (e.get("plan_draft_home_seq_ids"), plan_draft_home_seq_ids),
+                (e.get("plan_eager_seq_ids"), plan_eager_seq_ids),
+            ):
+                if isinstance(value, list):
+                    for item in value:
+                        append_unique(dst, item)
+
+            effective_gamma_values.append(
+                value_for_any_member(
+                    e.get("effective_gamma_per_seq"), idx, member_seq_id, member
+                )
+            )
+            home_batch_id_values.append(
+                value_for_any_member(
+                    e.get("home_batch_id_per_seq"), idx, member_seq_id, member
+                )
+            )
+            is_eager_values.append(
+                value_for_any_member(
+                    e.get("is_eager_per_seq"), idx, member_seq_id, member
+                )
+            )
         accepted_sum = numeric_sum(accepted)
         invalidated_sum = numeric_sum(invalidated)
         if accepted_sum is not None:
             row["accepted_tokens"] = int(accepted_sum)
         if invalidated_sum is not None:
             row["invalidated_predraft_tokens"] = int(invalidated_sum)
+
+        if plan_ids:
+            row["plan_ids"] = plan_ids
+            row["last_plan_id"] = plan_ids[-1]
+        if plan_legacy_values:
+            row["plan_legacy_equivalent"] = all(plan_legacy_values)
+        effective_gamma_candidates = [
+            to_int(value) for value in effective_gamma_values if to_int(value) is not None
+        ]
+        effective_gamma = (
+            effective_gamma_candidates[-1] if effective_gamma_candidates else None
+        )
+        if effective_gamma is not None:
+            row["effective_gamma"] = effective_gamma
+        if any(value is not None for value in home_batch_id_values):
+            row["home_batch_id"] = next(
+                (value for value in reversed(home_batch_id_values) if value is not None),
+                None,
+            )
+        elif home_batch_id_values:
+            row["home_batch_id"] = None
+        if any(value is not None for value in is_eager_values):
+            row["is_eager"] = bool(
+                next(
+                    (value for value in reversed(is_eager_values) if value is not None),
+                    False,
+                )
+            )
+        elif is_eager_values:
+            row["is_eager"] = False
+        if plan_roles:
+            row["plan_roles"] = plan_roles
+        if plan_scheduled_seq_ids:
+            row["plan_scheduled_seq_ids"] = plan_scheduled_seq_ids
+        if plan_target_seq_ids:
+            row["plan_target_seq_ids"] = plan_target_seq_ids
+        if plan_draft_home_seq_ids:
+            row["plan_draft_home_seq_ids"] = plan_draft_home_seq_ids
+        if plan_eager_seq_ids:
+            row["plan_eager_seq_ids"] = plan_eager_seq_ids
 
         row["num_low_level_events"] = len(events)
         aggregated.append(row)
@@ -574,9 +776,15 @@ def request_level_traces_from_payload(
     abs_workload: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
     high_level = extract_high_level_trace_list(trace_payload)
+    low_level = list(iter_low_level_trace_rows(trace_payload))
     if high_level:
-        return select_request_level_traces(high_level, abs_workload)
-    return select_request_level_traces(list(iter_low_level_trace_rows(trace_payload)), abs_workload)
+        request_rows = select_request_level_traces(high_level, abs_workload)
+        # Engines often return accurate request summaries under ``requests`` and
+        # scheduler/StepPlan details under low-level ``traces``. Preserve the
+        # request summary timing fields and overlay only compact plan metadata.
+        plan_rows = aggregate_low_level_traces(low_level, abs_workload) if low_level else []
+        return overlay_plan_fields(request_rows, plan_rows)
+    return select_request_level_traces(low_level, abs_workload)
 
 
 def first_present(row: Dict[str, Any], keys: List[str]) -> Any:
@@ -1303,6 +1511,13 @@ def trace_export_record(row: Dict[str, Any], execution_mode: str, decode_ready: 
         "slo_class": row.get("slo_class"),
         "slo_tpot_ms": row.get("slo_tpot_ms"),
         "per_request_gamma": row.get("per_request_gamma"),
+        "plan_ids": row.get("plan_ids"),
+        "last_plan_id": row.get("last_plan_id"),
+        "plan_legacy_equivalent": row.get("plan_legacy_equivalent"),
+        "effective_gamma": row.get("effective_gamma"),
+        "home_batch_id": row.get("home_batch_id"),
+        "is_eager": row.get("is_eager"),
+        "plan_roles": row.get("plan_roles"),
         "execution_mode": row.get("execution_mode", execution_mode),
         "decode_ready_mode": row.get("decode_ready_mode", decode_ready),
         "arrival_offset_sec": row.get("arrival_offset_sec"),

@@ -122,6 +122,11 @@ def summarize(path: Path) -> int:
     long_fast = 0
     elapsed_mismatch = 0
     tpot_mismatch = 0
+    rows_with_effective_gamma = 0
+    effective_gamma_values = set()
+    eager_true = 0
+    non_null_home_batch_id = 0
+    rows_with_plan_ids = 0
 
     for row in rows:
         tokens = infer_tokens(row)
@@ -148,6 +153,17 @@ def summarize(path: Path) -> int:
             if abs(expected - observed_tpot_ms) > 1e-3:
                 tpot_mismatch += 1
 
+        if row.get("effective_gamma") is not None:
+            rows_with_effective_gamma += 1
+            effective_gamma_values.add(row.get("effective_gamma"))
+        if row.get("is_eager") is True:
+            eager_true += 1
+        if row.get("home_batch_id") is not None:
+            non_null_home_batch_id += 1
+        plan_ids = row.get("plan_ids")
+        if isinstance(plan_ids, list) and plan_ids:
+            rows_with_plan_ids += 1
+
     dec_min, dec_med, dec_max = quantiles(decode_elapsed_values)
     tpot_min, tpot_med, tpot_max = quantiles(observed_tpot_values)
 
@@ -164,6 +180,11 @@ def summarize(path: Path) -> int:
     print(f"num_decode_output_tokens > 200 and decode_elapsed_ms < 1000 rows: {long_fast}")
     print(f"decode_elapsed_ms timestamp mismatches: {elapsed_mismatch}")
     print(f"observed_tpot_ms arithmetic mismatches: {tpot_mismatch}")
+    print(f"rows with effective_gamma: {rows_with_effective_gamma}")
+    print(f"unique effective_gamma values: {sorted(effective_gamma_values, key=str)}")
+    print(f"rows with is_eager=true: {eager_true}")
+    print(f"rows with non-null home_batch_id: {non_null_home_batch_id}")
+    print(f"rows with plan_ids: {rows_with_plan_ids}")
 
     anomalous = arrival_after_finish + elapsed_mismatch + tpot_mismatch
     if long_fast:
