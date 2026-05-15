@@ -3,7 +3,8 @@ from collections import deque
 from nano_pearl.pearl_config import PEARLConfig
 from nano_pearl.pearl_engine.sequence import Sequence, SequenceStatus
 from nano_pearl.pearl_engine.block_manager import BlockManager
-from nano_pearl.pearl_engine.pearl_model_runner import logger
+from nano_pearl.utils.pearl_logger import logger
+from nano_pearl.pearl_engine.stspec_plan import StepPlan, build_legacy_step_plan
 
 
 def is_eos(token_id: int, eos_token_id: int | list[int]):
@@ -23,6 +24,11 @@ class Scheduler:
         self.running: deque[Sequence] = deque()
         self.finished: list[Sequence] = []
         self.iteration_id = 0
+        # ST-Spec V3A shadow metadata only: assign deterministic 0/1 home
+        # membership when requests enter the scheduler. This does not change
+        # scheduling order or execution behavior; actual two-batch scheduling is
+        # deferred to a later PR.
+        self.next_home_batch_id = 0
 
     def next_batch_id(self, runner_role: str) -> tuple[int, str]:
         iteration_id = self.iteration_id
@@ -33,6 +39,9 @@ class Scheduler:
         return not self.waiting and not self.running
 
     def add(self, seq: Sequence):
+        if seq.home_batch_id is None:
+            seq.home_batch_id = self.next_home_batch_id
+            self.next_home_batch_id = 1 - self.next_home_batch_id
         self.waiting.append(seq)
 
     def schedule(self) -> tuple[list[Sequence], bool]:
@@ -72,6 +81,32 @@ class Scheduler:
         self.running.extendleft(reversed(scheduled_seqs))
         return scheduled_seqs, False
 
+    def schedule_with_plan(
+        self,
+        runner_role: str,
+        execution_mode: str,
+        decode_ready_mode: bool,
+        default_gamma: int,
+    ) -> tuple[list[Sequence], bool, StepPlan]:
+        """Return the legacy schedule plus a scaffold StepPlan.
+
+        This wrapper deliberately delegates to schedule() and does not alter the
+        scheduler decision. The plan_id mirrors the next trace iteration id that
+        _trace_schedule() will consume, preserving current iteration accounting.
+        """
+        plan_id = self.iteration_id
+        seqs, is_prefill = self.schedule()
+        step_plan = build_legacy_step_plan(
+            plan_id=plan_id,
+            seqs=seqs,
+            is_prefill=is_prefill,
+            runner_role=runner_role,
+            execution_mode=execution_mode,
+            decode_ready_mode=decode_ready_mode,
+            default_gamma=default_gamma,
+        )
+        return seqs, is_prefill, step_plan
+
     def preempt(self, seq: Sequence):
         seq.status = SequenceStatus.WAITING
         self.block_manager.deallocate(seq)
@@ -100,6 +135,7 @@ class Scheduler:
             seq = self.finished.pop()
             self.block_manager.deallocate(seq)
         self.iteration_id = 0
+        self.next_home_batch_id = 0
         self.block_manager.hash_to_block_id.clear()
         for block in self.block_manager.blocks:
             block.hash = -1
