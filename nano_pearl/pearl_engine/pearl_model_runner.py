@@ -1036,8 +1036,11 @@ class TargetModelRunner(ModelRunnerBase):
                     seq.pre_verify = True
                     if rollout[idx] > 1:
                         self.scheduler.rollback(seq, rollout[idx] - 1)
-                    seq.mark_finished()       
-        
+                    # A verification rejection ends the current speculative span,
+                    # not the request. Do not stamp request-level finish_ts until
+                    # the scheduler actually moves the sequence to finished.
+                    seq.mark_finished(record_finish_ts=False)
+
             if finish[idx]:
                 seq.mark_finished()
                 seq.num_acc_tokens.append(seq.cur_acc_tokens)
